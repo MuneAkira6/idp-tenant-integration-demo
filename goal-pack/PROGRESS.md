@@ -54,6 +54,7 @@ Build under test: —
 | Check | Verdict | Evidence |
 | --- | --- | --- |
 | L1 no secret value in the repository: `.env.example` holds dummies only (quote a search for the secret settings' names and what it finds) | | |
+| `pnpm lint` and `pnpm typecheck` cover every folder that holds code, tests included: quote the includes of `tsconfig.json` and `biome.json` beside the list of folders that contain `.ts` or `.tsx` files | | |
 
 Tally: —
 

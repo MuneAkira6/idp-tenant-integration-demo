@@ -13,7 +13,7 @@
       `bash .claude/hooks/goal-bus.sh --status` reports the hook timeout as ok.
 - [ ] Nothing else uses the same environment: no other armed pack in any working tree or on any
       machine, and nobody testing by hand. Check again right before launch.
-- [ ] Caps are calibrated: one run (7 goals, about 9 reviews, 83 rows) is below MAX_REVIEWS / MAX_TURNS.
+- [ ] Caps are calibrated: one run (7 goals, about 9 reviews, 84 rows) is below MAX_REVIEWS / MAX_TURNS.
 - [ ] The facts the run depends on first are measured again on the run's machine, right before
       launch: F3 (Docker), F4 (the two images), F5 (the ports) and F10 in `specs/…/facts.md`, with
       "last re-measured" updated, or a Superseded box added if one no longer holds.

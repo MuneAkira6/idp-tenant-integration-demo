@@ -29,5 +29,5 @@ Work inside this repository, the OS temp directory and the browser directory onl
 8. Mark goal-pack/SCOPE.md as FROZEN with today's date, changing nothing else in it.
 
 Judge every G0 row in PROGRESS.md with the output you quote. End every turn on a progress line such as
-`PROGRESS: G0 ac_done=2/9 pass=2 fail=0 blocked=0 deferred=0`, and when every G0 row has a verdict,
+`PROGRESS: G0 ac_done=2/10 pass=2 fail=0 blocked=0 deferred=0`, and when every G0 row has a verdict,
 end with `PROGRESS: G0 COMPLETE`.

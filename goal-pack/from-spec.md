@@ -21,7 +21,7 @@ where each of its outputs went in this pack, and reconciles the counts.
 
 - Disposition table: 15 criteria; 13 adopted or changed, 2 excluded.
 - Permissions section: 3 roles; 3 rows (AC-40 to AC-42).
-- Verdict table: 83 rows. 53 are requirement rows (E1–E8 and AC-1 to AC-45); 30 are checks: the tests,
+- Verdict table: 84 rows. 53 are requirement rows (E1–E8 and AC-1 to AC-45); 31 are checks: the tests,
   lint and change set of every goal, the M and L items that are not already an AC row, and the closing
   of G6.
 - Why the numbers differ: the template counts one row per adopted or changed criterion plus one per
