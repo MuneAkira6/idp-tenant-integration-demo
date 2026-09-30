@@ -1,0 +1,5 @@
+node_modules/
+.claude/hooks/
+.claude/settings.local.json
+test-results/
+playwright-report/
