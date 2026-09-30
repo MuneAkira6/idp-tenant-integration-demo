@@ -147,6 +147,18 @@ can only be measured once the stack runs, the entry says which goal measures it.
 - **Alternatives**: pulling on demand when a page opens (slow pages, and nothing to show when the
   platform is down).
 
+## R-16 Dependency majors chosen by measurement under the supply-chain settings
+
+- **Decision**: Rsbuild 2 (`@rsbuild/core` ^2, `@rsbuild/plugin-react` ^2), React Router 8, the MongoDB
+  driver 7, with `strictDepBuilds: true` and an empty `allowBuilds`.
+- **Rationale**: measured on the implementation host on 2026-09-30 with `minimumReleaseAge: 4320`: with
+  Rsbuild 1 the install fails, `[ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: core-js@3.47.0`
+  (`pnpm why core-js` → `@rsbuild/core@1.7.6`); with Rsbuild 2 the whole dependency set installs in
+  8 s and nothing asks to run a build script (resolved: `@rsbuild/core 2.2.9`, `react-router 8.4.0`,
+  `mongodb 7.6.0`, `fastify 5.12.5`, `openid-client 6.8.8`, `jose 6.2.12`, `react 19.3.0`).
+- **Alternatives**: keeping Rsbuild 1 and declaring `core-js: false` in `allowBuilds` (also measured to
+  work, but it widens the supply-chain settings for a package that is no longer needed).
+
 ## R-15 Ports, secrets and the stack
 
 - **Decision**: API 18400, web 18401, mock platform 18402, MongoDB 18417, Keycloak 18480 (all measured
