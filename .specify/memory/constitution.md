@@ -1,7 +1,9 @@
 <!--
 Sync Impact Report
-- Version: 1.0.0 → 1.1.0 (MINOR: a new section, Exceptions; each principle's closing line now says what
-  breaks without it; the Constraints line on Compose corrected to what runs in it)
+- Version: 1.0.0 → 1.1.0 → 1.1.1
+  - 1.1.0, MINOR: a new section, Exceptions; each principle's closing line now says what breaks
+    without it; the Constraints line on Compose corrected to what runs in it
+  - 1.1.1, PATCH: the Constraints line on pnpm corrected, after facts.md F7 was superseded
 - Principles: none added, removed or redefined
 - Templates: plan.md's constitution check re-judged on 2026-09-30; no spec-kit template changed
 -->
@@ -86,8 +88,9 @@ middle moves.
 
 - Synthetic data only. No real organisation, product, person or credential appears anywhere; the demo
   product is Acme Tasks, a fictional multi-tenant task-management SaaS.
-- The stack: Node 24, TypeScript, pnpm (through corepack) with the supply-chain settings
-  (`minimumReleaseAge`, `strictDepBuilds`, `allowBuilds`), Fastify, React with Rsbuild, MongoDB 7,
+- The stack: Node 24, TypeScript, pnpm pinned by `packageManager` (through corepack on CI; the
+  implementation host's own pnpm honours the pin without it, see facts.md F7) with the supply-chain
+  settings (`minimumReleaseAge`, `strictDepBuilds`, `allowBuilds`), Fastify, React with Rsbuild, MongoDB 7,
   Keycloak as the stand-in IdP, Vitest and Playwright. Keycloak and MongoDB run locally with Docker
   Compose; the Node services run from the workspace.
 - Secrets reach the services through the environment (the stand-in for a secret store), never through
@@ -116,4 +119,4 @@ is recorded under Exceptions with its date, its reason and the condition that en
 is not recorded there is a violation. Plans and goal reviews check compliance against each principle by
 number.
 
-**Version**: 1.1.0 | **Ratified**: 2026-09-30 | **Last Amended**: 2026-09-30
+**Version**: 1.1.1 | **Ratified**: 2026-09-30 | **Last Amended**: 2026-09-30

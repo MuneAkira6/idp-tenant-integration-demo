@@ -5,7 +5,7 @@ be observed. Shapes are in [contracts/](contracts/api.md) and [data-model.md](da
 
 ## 1. Prerequisites
 
-Docker with Compose, Node 24, pnpm through corepack (`packageManager`), and Chromium for Playwright
+Docker with Compose, Node 24, pnpm pinned by `packageManager` (through corepack on a fresh machine or CI), and Chromium for Playwright
 1.62.1 installed with `pnpm exec playwright install chromium`. Free ports 18400–18419 and 18480.
 
 ## 2. Start

@@ -18,7 +18,7 @@ agent reads this brief first and does not re-investigate the settled facts.
 | F4 | Keycloak 26.7.4, the newest stable tag, and `mongo:7` (7.0.43) are on the host | [facts.md](facts.md), F4 | 2026-09-30 |
 | F5 | Ports 18400–18419 and 18480 are free; the ports in use belong to other services | [facts.md](facts.md), F5 | 2026-09-30 |
 | F6 | Playwright 1.63.0 refuses this Ubuntu 20.04 host; 1.62.1 installs Chromium 151 and opens a page | [facts.md](facts.md), F6 | 2026-09-30 |
-| F7 | Node v24.19.0; pnpm 11.28.0 through `packageManager` | [facts.md](facts.md), F7 | 2026-09-30 |
+| F7 | Node v24.19.0; pnpm 11.28.0 through `packageManager`, selected by pnpm itself, not corepack | [facts.md](facts.md), F7 (with its Superseded box) | 2026-09-30 |
 | F8 | Rsbuild 1 stops the install under the supply-chain settings (a core-js build script) | [facts.md](facts.md), F8 | 2026-09-30 |
 | F9 | Rsbuild 2, React Router 8 and the MongoDB driver 7 install with no build script | [facts.md](facts.md), F9 | 2026-09-30 |
 | F10 | The host has no Java and no MongoDB shell | [facts.md](facts.md), F10 | 2026-09-30 |

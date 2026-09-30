@@ -46,7 +46,7 @@ the bus judges.
 Each fact has its entry in [facts.md](../specs/001-idp-tenant-integration/facts.md), with the command
 and the output; the ids are those of the spec folder.
 
-- F7: Linux (Ubuntu 20.04), Node `v24.19.0`; corepack gives pnpm `11.28.0` from `packageManager`.
+- F7: Linux (Ubuntu 20.04), Node `v24.19.0`; pnpm switches itself to `11.28.0` from `packageManager` (the global pnpm is 11.22.0; corepack is not enabled here, see red line 8).
 - F8, F9: **dependencies, measured under the supply-chain settings** (`minimumReleaseAge: 4320`,
   `strictDepBuilds: true`, `allowBuilds: {}`): `@rsbuild/core` ^2, `@rsbuild/plugin-react` ^2,
   `react-router` ^8, `mongodb` ^7, `fastify` ^5, `@fastify/cookie` ^11, `openid-client` ^6, `jose` ^6,
@@ -225,6 +225,11 @@ this order; a part with nothing to say says "None" and is not dropped:
    finished SDD phase: do not run them.
 8. Network: only `pnpm install`, `pnpm exec playwright install chromium` and the Compose images already
    pulled. No `sudo`.
+   **Nothing that installs or enables a tool outside this repository**: no `corepack enable`, no
+   `npm install -g`, no global `pnpm add -g`. pnpm 11.28.0 is already selected by `packageManager`
+   (F7). The Node installation on this machine is shared, and `corepack enable` rewrites its `pnpm`
+   (another run on this host did so and lost `pnpm` until it was repaired by hand). A CI workflow may
+   contain such setup steps; they run on CI only. Here, verify only the project's own commands.
 9. No employer, product, customer, team or person names; no figures about the author's work.
 
 ### There is a bus above you

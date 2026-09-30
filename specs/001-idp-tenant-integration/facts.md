@@ -139,6 +139,26 @@ v24.19.0
 - What follows: the workspace pins pnpm through `packageManager`, and the host's corepack honours it.
 - Decisions that depend on it: T001.
 
+Superseded
+
+- Superseded on: 2026-09-30
+- New observation: corepack is not what selects 11.28.0. The host's `pnpm` is its own global install,
+  version 11.22.0, and pnpm itself switches to the version `packageManager` names:
+
+```
+$ pnpm --version   # in the home directory, no packageManager
+11.22.0
+$ readlink /usr/local/bin/pnpm
+../lib/node_modules/pnpm/bin/pnpm.mjs
+$ pnpm --version   # in a scratch workspace with packageManager pnpm@11.28.0
+11.28.0
+```
+
+- What follows now: the pin through `packageManager` holds without corepack, and corepack must not be
+  enabled on this host: `corepack enable` rewrites the shared `/usr/local/bin/pnpm` (an earlier run on
+  this host did so, then could not fetch pnpm through the proxy, and lost `pnpm` until it was repaired).
+- How to read the entry above: kept as it was; its output is still true, its "what follows" is not.
+
 ### F8: Rsbuild 1 stops the install under the supply-chain settings, because of core-js's build script
 
 - Measured on: 2026-09-30 / last re-measured: 2026-09-30
