@@ -6,12 +6,8 @@ Marks: 🆕 new · ✅ verified · 🔴 warning · ~~struck~~ no longer true.
 
 ## Environment facts across goals
 
-- 🆕 Measured on this host while the pack was written (2026-09-30): Node `v24.19.0`; pnpm `11.28.0`;
-  the dependency set with Rsbuild 2 installs in 8 s with no build script (Rsbuild 1 fails on core-js).
-- 🆕 Playwright pinned at 1.62.1 (1.63.0 refuses Ubuntu 20.04); Chromium already in
-  `PLAYWRIGHT_BROWSERS_PATH`.
-- 🆕 Docker 28.1.1, Compose v2.35.1; Keycloak 26.7.4 and mongo:7 (v7.0.43) already pulled; ports
-  18400–18419 and 18480 free; no Java and no MongoDB shell on the host.
+- 🆕 The measured facts of this host are entries F3–F10 of `specs/001-idp-tenant-integration/facts.md`,
+  each with its command and output; cite them by id. The run appends its own from F11 on.
 - 🆕 An HTTPS proxy is configured through environment variables. Nobody unsets or prints them.
 - 🆕 The run uses its own Claude configuration directory: no user-level skills, memory or MCP servers.
   The project's `.claude/skills/speckit-*` exist but belong to the finished SDD phase.
@@ -28,11 +24,16 @@ Marks: 🆕 new · ✅ verified · 🔴 warning · ~~struck~~ no longer true.
 
 ## Watch closely
 
-- 🔴 The recorded token shapes of G0 are the truth for G1 and G2; a verifier written from documentation
-  instead is a defect even if its tests pass.
+- 🔴 The recorded token shapes of G0 (facts.md, F11 on) are the truth for G1 and G2; a verifier written
+  from documentation instead is a defect even if its tests pass.
 - 🔴 Every guard needs its control red: first-contact uniqueness, signature, timestamp window, refresh
-  classification, loop guard.
+  classification, loop guard, the permission check, and the roles of the token path.
+- 🔴 Permissions are the server's: one table, one check before every handler. A web client that hides
+  a link is not a check (FR-033).
+- 🔴 A token's principal gets its roles from the token, in memory; a write to `users.roles` on the token
+  path is a defect (FR-034).
 - 🔴 Default off: the `local` tenant must give the same results as its G0 baseline in every goal.
 - 🔴 Docker only through compose for acme-idp-demo; nothing mounted from outside the repository.
 - 🔴 The injected clock is for tests only; the production wiring keeps the real intervals (AC-31).
+- 🔴 facts.md grows only by new entries or Superseded boxes; an edited entry is a defect.
 - 🔴 The README separates practice from demo exactly as `materials/sources.md` does.

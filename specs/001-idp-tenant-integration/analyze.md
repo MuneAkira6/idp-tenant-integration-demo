@@ -36,3 +36,30 @@ existing ids stay stable.
 ## Result
 
 8 findings (1 HIGH, 4 MEDIUM, 3 LOW), all remediated before implementation. No open finding.
+
+## Round 2 (2026-09-30, after the alignment with the playbook)
+
+The same read-only cross-check, repeated after the folder was put into the playbook's forms (research
+R-17), with the new artifacts included: facts.md, the permissions section and the disposition table of
+spec.md, and the verification checklists of tasks.md. The new tasks got new ids (T065–T070) and the new
+requirements new numbers (FR-033–FR-035, SC-009), so every existing id stays stable.
+
+| ID | Severity | Where | Finding | Remediation |
+|---|---|---|---|---|
+| A9 | HIGH | US3, FR-011–FR-013; the ticket's criterion 7 | Roles were derived from the platform but decided nothing: no operation depended on a role, and the ticket's "permissions follow the roles" had no requirement. Found by filling in the permissions section of the spec addendum | The Permissions section, US9, FR-033–FR-035 and SC-009; the tiers and the token path's roles decided by a human (C6, C7); Q16–Q18 with two controls; T065–T070 |
+| A10 | MEDIUM | the goal brief's facts; F10 | "The host has no Java and no MongoDB shell" was stated without a measurement (constitution IV) | Measured on 2026-09-30 and recorded as F10, with its command and output |
+| A11 | MEDIUM | tasks.md, the verification lines of each phase | The verification items had no ids, and four logical items had no row in the goal ledger (no secret in the repository; every integration path checks its setting first; one mapping table; no failure writes `lastSuccessAt`) | The checklists M1–M12 and L1–L12, each naming its ledger row; check rows added to the goal ledger for L1, L4, L6, L7 and L10 |
+| A12 | MEDIUM | the goal ledger, AC-39 | The traceability row covered FR-001–FR-032 and SC-001–SC-008 only | AC-39 now covers FR-001–FR-035 and SC-001–SC-009 |
+| A13 | LOW | constitution I; the unattended run | Principle I has humans commit at goal boundaries, which nobody can do during an unattended run | An exception recorded in the constitution, with its reason and the condition that ends it (version 1.1.0) |
+| A14 | LOW | T004; Q16 | Q16 needs one user of each application role in `tenant-a`, and the seeded users did not provide them | T004 seeds one user per role in `tenant-a` |
+| A15 | LOW | research.md | R-16 stood before R-15 | Reordered; no id changed |
+
+Coverage after remediation:
+
+- Every FR-001 to FR-035 has at least one implementing task and one test task.
+- Every SC-001 to SC-009 has a test that measures it (SC-002, SC-003, SC-007 and SC-009 with a control).
+- Every adopted or changed criterion of the ticket leads to at least one FR (the disposition table of
+  spec.md); the two excluded criteria lead to none.
+- Constitution: re-judged in plan.md, all seven gates passed; the one exception is recorded.
+
+Round 2: 7 findings (1 HIGH, 3 MEDIUM, 3 LOW), all remediated before implementation. No open finding.

@@ -38,6 +38,9 @@ pnpm e2e                      # browser flows (Playwright starts api, web and mo
 | Q13 | Sign in as a user of `tenant-a` and of `local` | `tenant-a` sees no password, invitation or deletion pages and lands on `/board`; `local` sees everything and lands on `/home` |
 | Q14 | Force the IdP to bounce the browser straight back to sign-in | the loop guard stops on `/error/loop` after at most one return (SC-007) |
 | Q15 | Start with no integration settings at all | `local` passes its tests; every token and every event is refused (SC-008) |
+| Q16 | For a `member`, a `manager` and an `admin` of `tenant-a`, call `GET /api/tasks`, `POST /api/tasks`, `GET /api/devices` and `GET /api/users` | the 12 answers match the permission table of data-model.md: 200 or 201 where it says yes, 403 `forbidden` where it says no, and no document changed by a 403 (SC-009) |
+| Q17 | Call `GET /api/devices` with a platform token whose roles map to `manager`; remove that role in Keycloak, obtain a new token and call again | 200, then 403 `forbidden`; no sign-in in between, and the user's stored `roles` are unchanged (FR-034) |
+| Q18 | As the `admin` of `tenant-a`, call `GET /api/users` | only `tenant-a` users are listed, although `tenant-b` and `local` have users too (FR-035) |
 
 ## 4. The controls (a guard counts only once it has been seen red)
 
@@ -48,6 +51,8 @@ pnpm e2e                      # browser flows (Playwright starts api, web and mo
 | timestamp window | Q8 with the window set to "unlimited" in the test → the stale event is applied |
 | loop guard | Q14 with the guard switched off in the test → the browser bounces more than twice within 60 s |
 | refresh classification | Q3 with every refresh failure treated alike → one of the two cases ends wrong |
+| permission check | Q16 with the check switched off in the test → the `member` reads the devices |
+| roles of the token path | Q17 with the principal's roles read from the stored user instead → the second call still answers 200 |
 
 Each control runs in a test that says it is a control, and the goal ledger quotes both the red and the
 green.
@@ -55,4 +60,4 @@ green.
 ## 5. Two runs agree
 
 A verdict counts when two consecutive runs of the same command agree; the ledger quotes both summaries
-and names the commit and the image tags.
+and names the build under test: the commit, a fingerprint of the working tree and the image digests.

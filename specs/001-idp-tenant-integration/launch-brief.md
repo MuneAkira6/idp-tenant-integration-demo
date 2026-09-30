@@ -1,67 +1,109 @@
-# Launch brief — 001 sign-in and tenant integration with the group platform
+# Launch brief — ACME-2040 Sign-in and tenant integration with the group platform
 
-Written on 2026-09-30, before the SDD session starts, for the agent that runs it. It says what is already
-settled, what bounds the spec, which questions go to a human, how the work proceeds and how it is
-verified. The agent reads it first and does not re-investigate the settled facts.
+Form: the launch brief of spec-driven-dev-playbook (`templates/sdd-launch-prompt.md`), in its seven
+parts.
 
-## 1. Settled facts (with their source; do not re-investigate)
+Written: 2026-09-30, before the SDD session / by: the author. Revised the same day, before the goal pack
+went to the run: parts 1, 3, 4, 6 and 7 put into the playbook's form, F8–F10 added, and C6–C7 added
+when the permissions section of the spec showed that the roles decided nothing (research R-17). The
+agent reads this brief first and does not re-investigate the settled facts.
 
-| # | Fact | Source |
-|---|---|---|
-| F1 | The design this demo reproduces: authorisation code + PKCE (S256) sign-in ending in the app's own session; platform Bearer tokens accepted on the existing API with an in-memory principal only; roles re-derived at every sign-in (union → mapping table → replace, written only when changed, unmapped → lowest role with a warning); signed webhooks stored first and processed asynchronously; tenant sync with claims and tombstones; hourly device pulls; one visibility registry; everything default off | the author's case study 01 (public): https://github.com/MuneAkira6/engineering-case-studies/blob/main/01-platform-integration.md |
-| F2 | The stand-ins: Keycloak for the platform's IdP (one realm per tenant, so the issuer names the tenant; client roles in `resource_access`; service accounts for client credentials; realms imported from JSON), a mock platform for events, the tenant API and the device API, MongoDB 7 for the app's data | the approved design of this repository (Gate 2) |
-| F3 | On the host that runs the implementation (2026-09-30): Docker `28.1.1`, Compose `v2.35.1`, the account in the `docker` group | `docker version --format '{{.Server.Version}}'`, `docker compose version`, `id -nG` |
-| F4 | `quay.io/keycloak/keycloak:26.7.4` is the newest stable tag and pulls in 38 s (477 MB); `mongo:7` is `db version v7.0.43` and pulls in 60 s (865 MB) | quay.io tag API; `docker pull -q`; `docker run --rm mongo:7 mongod --version` |
-| F5 | Listening TCP ports on the host: 22 53 139 445 631 3128 3350 3389 — everything else, including 18400–18499, is free; 3128 belongs to another service and is not touched | `ss -ltnH` |
-| F6 | Playwright 1.63.0 refuses this Ubuntu 20.04 host (`Playwright does not support chromium on ubuntu20.04-x64`); 1.62.1 installs Chromium (headless shell 151.0.7922.34) and opens a page in about 2 s | `playwright install chromium`; a scripted headless launch |
-| F7 | Node `v24.19.0`; pnpm `11.28.0` through `packageManager`; `pnpm install` of a comparable workspace takes a few seconds and needs no build scripts | `node --version`; `pnpm --version`; `pnpm install` |
+## 1. Settled facts (do not re-investigate)
+
+| # | Fact | Source | Measured or read on |
+|---|---|---|---|
+| F1 | The design this demo reproduces: authorisation code + PKCE (S256) sign-in ending in the app's own session; platform Bearer tokens accepted on the existing API with an in-memory principal only; roles re-derived at every sign-in (union → mapping table → replace, written only when changed, unmapped → lowest role with a warning); signed webhooks stored first and processed asynchronously; tenant sync with claims and tombstones; hourly device pulls; one visibility registry; everything default off | the author's case study 01 (public): https://github.com/MuneAkira6/engineering-case-studies/blob/main/01-platform-integration.md | 2026-09-30 (read) |
+| F2 | The stand-ins: Keycloak for the platform's IdP (one realm per tenant, so the issuer names the tenant; client roles in `resource_access`; service accounts for client credentials; realms imported from JSON), a mock platform for events, the tenant API and the device API, MongoDB 7 for the app's data | the approved design of this repository | 2026-09-30 (read) |
+| F3 | Docker 28.1.1 and Compose v2.35.1 are available to the account that runs the implementation | [facts.md](facts.md), F3 | 2026-09-30 |
+| F4 | Keycloak 26.7.4, the newest stable tag, and `mongo:7` (7.0.43) are on the host | [facts.md](facts.md), F4 | 2026-09-30 |
+| F5 | Ports 18400–18419 and 18480 are free; the ports in use belong to other services | [facts.md](facts.md), F5 | 2026-09-30 |
+| F6 | Playwright 1.63.0 refuses this Ubuntu 20.04 host; 1.62.1 installs Chromium 151 and opens a page | [facts.md](facts.md), F6 | 2026-09-30 |
+| F7 | Node v24.19.0; pnpm 11.28.0 through `packageManager` | [facts.md](facts.md), F7 | 2026-09-30 |
+| F8 | Rsbuild 1 stops the install under the supply-chain settings (a core-js build script) | [facts.md](facts.md), F8 | 2026-09-30 |
+| F9 | Rsbuild 2, React Router 8 and the MongoDB driver 7 install with no build script | [facts.md](facts.md), F9 | 2026-09-30 |
+| F10 | The host has no Java and no MongoDB shell | [facts.md](facts.md), F10 | 2026-09-30 |
 
 ## 2. Constraints that shape the spec
 
 - Demo scale: two integrated tenants and one tenant that is not integrated; a handful of users and
-  devices each. Synthetic data only; the product is Acme Tasks.
+  devices each. Synthetic data only; the product is Acme Tasks, and no name or figure from the author's
+  work appears.
 - Default off (constitution VI): the tenant that is not integrated must behave exactly as before, with
   its own password sign-in, and every integration path is refused until it is configured.
-- Everything runs locally with Docker Compose; the host has no Java and no MongoDB shell outside the
-  container.
+- Everything runs locally: Keycloak and MongoDB with Docker Compose, the Node services from the
+  workspace.
+- The ticket ACME-2040 is input. Its acceptance criteria reach the spec only through the disposition
+  table, and the spec decides (constitution II).
 - The spec describes what and why, not how: no framework, library or endpoint names in spec.md.
 
-## 3. Questions for a human, one at a time (the agent does not answer them)
+## 3. Questions for a human, one at a time
 
-1. How the application's own session is kept after a platform sign-in.
-2. What happens to a platform role that has no mapping in the application.
-3. What deleting a tenant on the platform does to that tenant's data in the application.
-4. How hourly timers and 30-day expiries are verified without waiting for them.
-5. Which parts of the application an integrated tenant no longer sees, and where its users land.
+The agent does not answer these. Each goes to a human with a recommendation and its reason, and the
+answer is recorded in spec.md, Clarifications, before planning.
 
-Each goes with a recommendation and its reason; the answer is recorded under Clarifications in spec.md
-before planning.
+| # | Question | Options (the recommendation first) | Work that stops until it is decided |
+|---|---|---|---|
+| C1 | How is the application's own session kept after a platform sign-in? | a server-side session with an opaque cookie / a signed cookie with no server state / the platform token forwarded to the browser | the session design (research R-5), FR-003 |
+| C2 | What happens to a platform role that has no mapping in the application? | the lowest role and a warning / refuse the sign-in / ignore the role | role derivation (T029) |
+| C3 | What does deleting a tenant on the platform do to its data in the application? | a tombstone: access refused, data kept for 30 days / delete at once / deactivate, restorable | tenant sync (research R-9) |
+| C4 | How are hourly timers and 30-day expiries verified without waiting for them? | an injected clock in tests, the real intervals in the running system / wait for the real timer once more / shorten the defaults | every test of hourly and 30-day behaviour |
+| C5 | What does an integrated tenant no longer see, and where do its users land? | hide the functions the platform owns and land on the task board / hide nothing and show a notice / hide the whole administration area | the visibility registry (contracts/web.md) |
+| C6 | What may each application role do? | three tiers / two tiers / no difference | the permission check (FR-033) |
+| C7 | Where do the roles of a caller with a platform token come from? | from the token, on every request / the stored roles / always `member` | the permissions of the token path (FR-034) |
+
+C6 and C7 were added on 2026-09-30, when the permissions section of the spec showed that the first
+draft gave the roles nothing to decide.
 
 ## 4. Steps
 
-constitution → specify → clarify (the questions above) → plan (research, data model, contracts,
-quickstart) → tasks → analyze → a goal pack generated from the spec's acceptance criteria → the
-implementation, run unattended by goal-bus-kit.
+1. constitution: the seven principles in `.specify/memory/constitution.md`.
+2. specify: `spec.md`, with the permissions section and the ticket's disposition table.
+3. clarify: C1–C7, one at a time; the answers go to spec.md, Clarifications.
+4. plan: `plan.md` through the seven constitution gates, with research, data model, contracts and
+   quickstart; the measured facts in `facts.md`.
+5. tasks: `tasks.md`, with the manual and logical verification checklists.
+6. analyze: `analyze.md`; every finding remediated before the implementation.
+7. goal pack: `goal-pack/`, made from the spec as `goal-pack/from-spec.md` records.
+8. implement: the unattended run of goal-bus-kit, which judges every row of `goal-pack/PROGRESS.md`.
 
 ## 5. Verification rules
 
-- Every acceptance criterion is judged PASS / FAIL / BLOCKED / DEFERRED with quoted evidence.
-- A guard counts only after its test has been seen red without it (the uniqueness of first contact,
-  the signature check, the loop guard).
+- Every row is judged PASS / FAIL / BLOCKED / DEFERRED with quoted evidence; a FAIL reads
+  "expected X / actual Y".
+- A precondition the environment cannot produce is BLOCKED, and so is a result that needed the
+  environment fixed by hand.
+- A guard counts only after its test has been seen red without it: the uniqueness of first contact,
+  the signature check, the timestamp window, the refresh classification, the loop guard and the
+  permission check.
 - A verdict counts when two consecutive runs agree.
-- The build under test is pinned: the verdicts name the commit and the image tags they ran against.
+- The build under test is pinned: each goal records the commit, a fingerprint of the working tree and
+  the image digests before its first verdict.
+- An annotated PASS keeps its note in the row. A split verdict counts once per arm, so each goal's table
+  ends with its tally of rows and of verdicts.
 
 ## 6. Constitution articles in force
 
-All seven. The ones this feature leans on hardest: IV (measure the IdP and the platform, do not trust a
-description), V (controls before greens), VI (default off, one session downstream) and VII (freeze the
-contracts before the apps are built).
+- I, Agents Never Touch Branches: the spec folder is named explicitly, and nothing in the run creates
+  or switches a branch. The exception about commits at goal boundaries is recorded in the constitution.
+- II, The Spec Folder Is the Requirement: ACME-2040 is input, and its criteria reach the spec only
+  through the disposition table.
+- III, Humans Decide the Open Questions: C1–C7.
+- IV, Measure Before Asserting: F3–F10 are measured with their commands, and Keycloak's token shapes are
+  measured in G0 before G1 depends on them.
+- V, Verdicts Rest on Evidence: every guard has a control, the permission check included.
+- VI, Default Off, One Session Downstream: the tenant that is not integrated is the baseline of every
+  goal.
+- VII, Contracts Freeze Before Parallel Work: `packages/contracts` is frozen in G0 and rewritten as
+  AS-BUILT in G6.
 
 ## 7. Finishing checklist
 
-- [ ] spec.md has no open clarification markers and records the five answers
-- [ ] plan.md passes the seven constitution gates
-- [ ] contracts frozen, each with its name and shape
-- [ ] tasks.md carries the manual and logical verification checklists
-- [ ] analyze reports no unresolved finding
-- [ ] the goal pack's verdict table has one row per acceptance criterion of spec.md
+- [x] spec.md has no open clarification marker and records the answers to C1–C7
+- [x] every row of the disposition table has a disposition, and every change and exclusion its reason
+- [x] the permissions section says what each role can and cannot do, and where that is decided
+- [x] plan.md passes the seven constitution gates
+- [x] the contracts are named and shaped, for the run to freeze in G0
+- [x] tasks.md carries the manual and logical verification checklists and what they do not cover
+- [x] analyze reports no unresolved finding
+- [x] every row of the goal pack traces to the spec, and the counts are reconciled in
+      `goal-pack/from-spec.md`

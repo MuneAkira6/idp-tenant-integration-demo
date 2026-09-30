@@ -35,6 +35,12 @@ API, an expired session, an explicit "sign in" link) goes through it. (FR-027)
   shows the error page "Sign-in is looping" instead of redirecting.
 - Either stage ends on the error page, with a link that clears the marker. (FR-028, SC-007)
 
+## Permissions in the web client
+
+The web client decides no permission. `/devices` and `/users` call their API routes and show the
+answer; a 403 `forbidden` is shown as "You do not have permission to see this page". Links may be left
+out for a role that cannot use them, but the server's answer is the check. (FR-033)
+
 ## Pages used by the tests
 
 `/home`, `/board`, `/settings/password`, `/users/invite`, `/settings/delete-tenant`, `/settings`

@@ -16,20 +16,26 @@ requirements it serves. Error bodies are `{"error":"<code>","message":"<text>"}`
 Refresh (inside the API, not a route): a refused refresh (`invalid_grant`) ends the session; a network
 error or a 5xx keeps it and sets `refreshRetryAt`.
 
-## The existing API (unchanged routes, one more way in)
+## The existing API (one more way in, one new route, and permissions)
 
-| Route | Behaviour | FR |
-|---|---|---|
-| `GET /api/tasks` | the signed-in user's tasks | — (existing) |
-| `POST /api/tasks` | create a task | — (existing) |
-| `GET /api/devices` | the tenant's devices and its `deviceSyncState` | FR-023, FR-024 |
+| Route | Behaviour | Roles | FR |
+|---|---|---|---|
+| `GET /api/tasks` | the signed-in user's tasks | `member`, `manager`, `admin` | — (existing), FR-033 |
+| `POST /api/tasks` | create a task | `member`, `manager`, `admin` | — (existing), FR-033 |
+| `GET /api/devices` | the tenant's devices and its `deviceSyncState` | `manager`, `admin` | FR-023, FR-024, FR-033 |
+| `GET /api/users` | the tenant's users: `{users:[{userId, email, name, roles}]}` | `admin` | FR-033, FR-035 |
 
 Authentication order for every `/api/*` route: an application session decides when present; only
 without one is `Authorization: Bearer <platform token>` read, verified (signature, `iss`, `aud`, `exp`)
-and turned into an in-memory principal. No session and no write are created by a Bearer request, except
-the one-time creation of a user seen for the first time (partial unique index; duplicate key → read
-back). An expired, wrongly addressed or unknown-issuer token: 401 `invalid_token`. With no issuer
-configured, every token: 401. (FR-007–FR-010, FR-029)
+and turned into an in-memory principal whose roles are derived from that token through the mapping
+table and never written. No session and no write are created by a Bearer request, except the one-time
+creation of a user seen for the first time (partial unique index; duplicate key → read back). An
+expired, wrongly addressed or unknown-issuer token: 401 `invalid_token`. With no issuer configured,
+every token: 401. (FR-007–FR-010, FR-029, FR-034)
+
+Permissions, after authentication and before the handler: the route's operation is compared with the
+principal's roles through the permission table of data-model.md; without the permission, 403
+`forbidden` and nothing changes. Every query is confined to the principal's tenant. (FR-033, FR-035)
 
 ## Webhooks
 

@@ -6,18 +6,21 @@
 
 **Status**: Draft
 
-**Input**: User description: "Acme Tasks, a multi-tenant task-management SaaS with its own accounts and
-sessions, joins a group-wide account and tenant platform. Users of integrated tenants sign in with
-their group account; other clients call the existing API with platform tokens; roles follow the
-platform; tenant lifecycle and device data come from the platform through signed events and pulls;
-integrated tenants see a UI shaped for them. Tenants that are not integrated must not change, and
-everything is off until configured."
+**Input**: Ticket ACME-2040 (synthetic, written for this demo), description: "Acme Tasks, a
+multi-tenant task-management SaaS with its own accounts and sessions, joins a group-wide account and
+tenant platform. Users of integrated tenants sign in with their group account; other clients call the
+existing API with platform tokens; roles follow the platform; tenant lifecycle and device data come
+from the platform through signed events and pulls; integrated tenants see a UI shaped for them. Tenants
+that are not integrated must not change, and everything is off until configured." The ticket's
+acceptance criteria are copied verbatim into the disposition table at the end of this file; the ticket
+itself is input, not a requirement (constitution II).
 
 ## Clarifications
 
 ### Session 2026-09-30
 
-Decided by a human, one question at a time, each against a recommendation.
+Decided by a human, one question at a time, each against a recommendation. The questions are those of
+the launch brief, in its order: C1–C5 here, C6 and C7 in the second round.
 
 - Q: How is the application's own session kept after a platform sign-in? → A: On the server: the
   browser holds only an opaque session cookie, and the platform tokens are kept encrypted on the server.
@@ -32,6 +35,16 @@ Decided by a human, one question at a time, each against a recommendation.
 - Q: What does an integrated tenant no longer see, and where do its users land? → A: Password
   management, user invitations and tenant deletion, which the platform owns, are hidden; users land on
   the task board. All of it is decided in one registry; tenants that are not integrated are unaffected.
+
+Second round, after the permissions section was added (C6 and C7):
+
+- Q: What may each application role do? → A: Three tiers. `member` reads and creates their own
+  tasks; `manager` can also read the tenant's devices; `admin` can also list the tenant's users with
+  their roles. Every permission is decided on the server for each operation; the web client only shows
+  the result.
+- Q: Where do the roles of a caller with a platform token come from? → A: From that token, on every
+  request: its roles go through the same mapping table in memory and are never written. The stored
+  roles serve browser sessions.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -222,6 +235,34 @@ existing tests, and every token and event is refused.
 3. **Given** a tenant whose integration flag is off, **When** its users use the application, **Then**
    nothing about the platform is visible or reachable.
 
+---
+
+### User Story 9 - Roles decide what each user may do (Priority: P2)
+
+A user's role decides which of the tenant's functions they may use: every member works with tasks,
+managers also see the tenant's devices, and administrators also see who is in the tenant and with
+which roles. The server decides; the browser only shows what the server allowed.
+
+**Why this priority**: roles that follow the platform (US3) mean nothing until they decide something.
+
+**Independent Test**: sign in as a user of each role and try the four operations of the Permissions
+section; then call with a platform token whose roles change on the platform between two calls.
+
+**Acceptance Scenarios**:
+
+1. **Given** a `member`, **When** they read and create tasks, **Then** both succeed; **When** they ask
+   for the devices or the list of users, **Then** both are refused as not permitted and nothing
+   changes.
+2. **Given** a `manager`, **When** they ask for the devices, **Then** they get them; **When** they ask
+   for the list of users, **Then** it is refused as not permitted.
+3. **Given** an `admin`, **When** they ask for the devices and the list of users, **Then** they get
+   both, and the list shows each user's roles.
+4. **Given** a caller with a platform token whose roles map to `manager`, **When** it asks for the
+   devices, **Then** it gets them; **When** that platform role is removed and the caller presents a new
+   token, **Then** the next request is refused, with no sign-in in between and nothing written.
+5. **Given** an `admin` of one tenant, **When** they list the users, **Then** only users of their own
+   tenant appear.
+
 ### Edge Cases
 
 - Eight first requests for one new user at the same moment.
@@ -232,6 +273,8 @@ existing tests, and every token and event is refused.
 - A device pull that fails on the second page.
 - A user whose last platform role was removed.
 - The same browser starting two sign-ins at once.
+- A platform token whose roles differ from the roles stored at the user's last sign-in.
+- A user who opens the page of a function their role does not permit.
 
 ## Requirements *(mandatory)*
 
@@ -324,6 +367,16 @@ existing tests, and every token and event is refused.
   30-day expiries). Tests MAY advance an injected clock instead of waiting, and MUST say so where they
   do.
 
+**Permissions**
+
+- **FR-033**: The system MUST decide every permission on the server, for each operation, from the
+  principal's application roles, as the Permissions section states. A request without the permission
+  MUST be refused as not permitted and MUST change nothing. The web client MUST NOT be the only check.
+- **FR-034**: For a request authenticated by a platform token, the system MUST derive the principal's
+  roles from that token through the same mapping table, in memory, and MUST NOT write them.
+- **FR-035**: The system MUST confine every read and write of the application's operations to the
+  principal's own tenant.
+
 ### Key Entities *(include if feature involves data)*
 
 - **Tenant**: an organisation using Acme Tasks; whether it is integrated; its platform issuer; its
@@ -357,6 +410,10 @@ existing tests, and every token and event is refused.
 - **SC-007**: A forced sign-in loop stops with an error page after at most one return to the platform.
 - **SC-008**: With no integration settings, the tenant that is not integrated passes 100% of its
   existing checks, and 100% of tokens and events are refused.
+- **SC-009**: For each of the three roles, the four operations of the Permissions section (reading
+  tasks, creating tasks, reading devices, listing users) answer as the section states: 12 of 12
+  combinations, each observed. The same test with the permission check switched off lets a `member`
+  read the devices (the control is observed, not assumed).
 
 ## Assumptions
 
@@ -366,3 +423,50 @@ existing tests, and every token and event is refused.
 - Two integrated tenants and one tenant that is not integrated are enough to show every rule.
 - Secrets reach the services through the environment; nothing secret is stored in the repository.
 - Clocks on the demo stack are synchronised, so the five-minute timestamp window is meaningful.
+
+## Permissions (RBAC)
+
+Form: the permissions section of spec-driven-dev-playbook's spec addendum
+(`templates/spec-addendum.md`). The application roles come from the mapping table (FR-011–FR-013);
+`member` is the lowest. The table applies to every tenant; for the tenant that is not integrated, the
+roles are the ones stored for its users, as before.
+
+| Role | Can | Cannot | Decided at |
+|---|---|---|---|
+| `admin` | everything `manager` can; list the tenant's users with their roles | see or change anything of another tenant; change an integrated tenant's roles in Acme Tasks (the platform owns them, FR-011) | on the server, for each operation, after authentication (FR-033) |
+| `manager` | everything `member` can; read the tenant's devices and their sync state | list the tenant's users; anything of another tenant | on the server, as above |
+| `member` | read and create their own tasks | read the devices; list the users; anything of another tenant | on the server, as above |
+
+A browser session uses the roles derived at its sign-in (FR-011–FR-013). A caller with a platform token
+gets the roles its token maps to at that moment (FR-034).
+
+Open permission questions: none. The two this section raised, the tiers and the roles of a caller with
+a platform token, were decided by a human on 2026-09-30 (Clarifications, second round).
+
+## Ticket acceptance criteria — disposition
+
+Form: the disposition table of spec-driven-dev-playbook's spec addendum. Every acceptance criterion of
+the ticket, copied verbatim, with what this spec did with it and why. No row is ever deleted; a later
+change to the ticket adds a row.
+
+Ticket: ACME-2040 (synthetic, written for this demo)
+
+| # | Acceptance criterion of the ticket (verbatim) | Disposition | Reason | Where in this spec |
+|---|---|---|---|---|
+| 1 | Users of integrated tenants sign in to Acme Tasks with their group account. | Adopted | | US1; FR-001, FR-002 |
+| 2 | After sign-in, the web client keeps the platform's access token and sends it with every API call. | Changed | The browser holds only an opaque session cookie, and the platform tokens stay encrypted on the server (clarification C1). A platform token in the browser would be a second kind of session, which constitution VI rules out. | FR-003 |
+| 3 | Users stay signed in for as long as they are signed in to the platform. | Changed | Acme Tasks learns the platform's state only when it refreshes. An explicit refusal ends the session; a platform that cannot be reached says nothing about the user, so the session survives and the refresh is retried. | US1 scenarios 3 and 4; FR-004 |
+| 4 | Other group services can call the existing Acme Tasks API with a platform token. | Adopted | | US2; FR-007–FR-010 |
+| 5 | When a user's roles change on the platform, Acme Tasks applies the change immediately. | Changed | The platform does not tell Acme Tasks when roles change (F1), so there is nothing to act on at that moment. A change applies at the user's next sign-in, and at once for a caller with a platform token, whose roles are read from the token itself (clarification C7). | US3; FR-011, FR-012, FR-034 |
+| 6 | Platform roles that Acme Tasks does not know are ignored. | Changed | Ignoring them keeps only the roles that map; when none maps, the stored roles would stay, and a permission the platform has taken away would linger. An unknown role gives the tenant's lowest role and logs a warning naming it (clarification C2). | FR-013 |
+| 7 | Permissions follow the roles from the platform. | Changed | The ticket names no permission, and the first draft of this spec had none. Made concrete when the permissions section was added: three tiers, decided on the server for each operation (clarification C6). | Permissions (RBAC); US9; FR-033, FR-035; SC-009 |
+| 8 | Acme Tasks receives the platform's tenant events. | Adopted | | US4; FR-014–FR-018 |
+| 9 | When a tenant is deleted on the platform, its data in Acme Tasks is deleted. | Changed | The tenant is marked deleted (a tombstone): its sign-in and API calls are refused at once, and its data is kept for 30 days and then removed (clarification C3). A hard delete would let a late tenant-created event revive the tenant; the tombstone keeps events that arrive out of order convergent. | US5 scenario 3; FR-022 |
+| 10 | Acme Tasks shows the devices each tenant has registered on the platform. | Adopted | | US6; FR-023–FR-025 |
+| 11 | Integrated tenants do not see the functions the platform now owns. | Adopted | | US7; FR-026 |
+| 12 | Administrators of integrated tenants keep inviting users from Acme Tasks. | Excluded | The platform owns an integrated tenant's users. An invitation from Acme Tasks would create a user the platform does not know, and the invitation function is among those hidden for integrated tenants (clarification C5). | — |
+| 13 | Signing out of Acme Tasks signs the user out of every group service. | Changed | Signing out ends the application session and the platform session. The other services' own sessions are theirs to end. | FR-006 |
+| 14 | Tenants that need it can also sign in with SAML. | Excluded | The platform's sign-in is the authorisation code flow with a proof key (F1); no tenant in this scope signs in any other way. | — |
+| 15 | The integration can be switched on tenant by tenant, and nothing changes before that. | Adopted | | US8; FR-029–FR-031 |
+
+15 criteria: 6 adopted, 7 changed, 2 excluded.

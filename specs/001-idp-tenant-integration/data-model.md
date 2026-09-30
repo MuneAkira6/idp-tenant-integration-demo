@@ -40,7 +40,22 @@ R-8); unique on `{ tenantId, email }`.
 
 Role derivation: the union of the user's client roles across `acme-tasks` and `acme-reports` goes
 through the mapping table in `packages/contracts`; the result replaces `roles` and is written only when
-it differs; a role without a mapping yields `member` and a warning naming the role.
+it differs; a role without a mapping yields `member` and a warning naming the role. For a request
+authenticated by a platform token, the same derivation runs on that token in memory, and `roles` is not
+written (FR-034).
+
+## Permissions (not stored: a table in `packages/contracts`)
+
+| Operation | Route | `member` | `manager` | `admin` |
+|---|---|---|---|---|
+| `tasks.read` | `GET /api/tasks` | yes | yes | yes |
+| `tasks.create` | `POST /api/tasks` | yes | yes | yes |
+| `devices.read` | `GET /api/devices` | no | yes | yes |
+| `users.list` | `GET /api/users` | no | no | yes |
+
+A principal's permissions are the union over its roles. The check runs once per request, after
+authentication and before the handler; "no" answers 403 `forbidden` and changes nothing (FR-033). Every
+query runs with the principal's `tenantId` (FR-035).
 
 ## sessions
 

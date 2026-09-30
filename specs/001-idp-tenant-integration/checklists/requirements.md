@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [x] No [NEEDS CLARIFICATION] markers remain (five questions decided on 2026-09-30; see Clarifications in spec.md)
+- [x] No [NEEDS CLARIFICATION] markers remain (seven questions decided on 2026-09-30, five in the first round and two after the permissions section was added; see Clarifications in spec.md)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -33,4 +33,6 @@
 
 - The authorisation code flow, the proof key and constant-time comparison are named in FR-001 and
   FR-014 because they are the security properties required, not a choice of library.
+- The Permissions section and the disposition table follow the playbook's spec addendum; they name
+  roles and operations, not routes, so the spec stays free of endpoint names.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.

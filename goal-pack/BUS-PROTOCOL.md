@@ -60,10 +60,12 @@ BUS-NEXT-END
    query output, page text, an artifact hash) and does it answer the row? The evidence gate has
    already refused empty cells, missing quotes and weasel phrases, so look for the problems it
    cannot see: a quotation that answers another question, an observation too weak for the row, an
-   A/B whose two arms are not really different artifacts.
+   A/B whose two arms are not really different artifacts. Then recount the goal's tally line against
+   its rows (a split verdict counts once per arm, an annotated PASS once), and check that the build
+   under test is pinned under the goal's heading and that the goal's final runs were made on it.
 2. **The goal against what earlier goals found.** You see every goal; the worker sees only its own.
    This is the check a fresh reviewer cannot make, and the main reason you exist.
-3. **Contract drift.** The frozen contract: specs/001-idp-tenant-integration/ (spec.md with its Clarifications, data-model.md, contracts/) and packages/contracts once G0 has frozen it — names, shapes, status codes, error codes, defaults.
+3. **Contract drift.** The frozen contract: specs/001-idp-tenant-integration/ (spec.md with its Clarifications and its Permissions section, data-model.md with the permission table, contracts/) and packages/contracts once G0 has frozen it — names, shapes, status codes, error codes, defaults.
 4. **When unsure, check it yourself.** You can run `pnpm test`, `pnpm e2e`, `curl` against 18400–18419 and 18480, `docker compose ps|logs|exec` for project acme-idp-demo only, and scratch copies in the
    OS temp directory. Running a check is faster and more trustworthy than sending the goal back.
    Before touching a shared environment, run `goal-bus.sh --status`; restore whatever you change and
@@ -72,7 +74,8 @@ BUS-NEXT-END
 6. **The red lines** of the brief, especially an expectation taken from the code instead of the spec; a guard without its control, or a control that cannot fail; a secret written into the repository; Docker used beyond compose for acme-idp-demo; reading outside the repository; figures about the author's work.
 7. **The guards against themselves.** For every guard of the goal, check that its control really went
    red (the uniqueness index, the signature check, the timestamp window, the refresh classification,
-   the loop guard). A control that cannot fail proves nothing; re-run one yourself when in doubt.
+   the loop guard, the permission check, the roles of the token path). A control that cannot fail
+   proves nothing; re-run one yourself when in doubt.
 8. **Against the spec and the materials.** Every behaviour must trace to an FR, an SC or a Clarification
    of spec.md; the README's 「実務で実施した点」 and 「デモで追加した点」 must trace to
    `materials/sources.md`. A plausible claim that is not there is an invention, however well written.
@@ -80,6 +83,11 @@ BUS-NEXT-END
 9. **Your own probes stay in the OS temp directory and on the run's ports** (18400–18419, 18480);
    Docker only through `docker compose` for acme-idp-demo; leave the stack as you found it. Do not edit
    files in the repository to test something, even if you restore them.
+10. **The forms of the spec folder.** `facts.md` grows only by new entries from F11 on, or by a
+   Superseded box under an entry a measurement overturned; a row that depends on a measurement cites
+   its entry. A question of scope, security or what the user sees that the spec does not answer is
+   DEFERRED, never settled by the worker (constitution III). In G6, `HANDOFF.md` has the eight parts
+   of the brief, in their order.
 
 **No rubber stamps.** If you found nothing, say so and say what you checked. A verdict that only says
 "looks fine" is not a review.
@@ -98,7 +106,7 @@ A good verdict:
 
 ## 3. After a PASS: the next goal's instructions
 
-Not a copy of the runbook: the runbook step for the next goal (G0 → G1 → G2 → G3) plus what you
+Not a copy of the runbook: the runbook step for the next goal (G0 → G1 → … → G6) plus what you
 learned from the goals so far. This is the one part of the loop that needs your judgment. Worth
 injecting:
 

@@ -13,7 +13,10 @@
       `bash .claude/hooks/goal-bus.sh --status` reports the hook timeout as ok.
 - [ ] Nothing else uses the same environment: no other armed pack in any working tree or on any
       machine, and nobody testing by hand. Check again right before launch.
-- [ ] Caps are calibrated: one run (7 goals, about 9 reviews, 71 rows) is below MAX_REVIEWS / MAX_TURNS.
+- [ ] Caps are calibrated: one run (7 goals, about 9 reviews, 83 rows) is below MAX_REVIEWS / MAX_TURNS.
+- [ ] The facts the run depends on first are measured again on the run's machine, right before
+      launch: F3 (Docker), F4 (the two images), F5 (the ports) and F10 in `specs/…/facts.md`, with
+      "last re-measured" updated, or a Superseded box added if one no longer holds.
 - [ ] The usage budget for this run is available (check your plan's usage page).
 - [ ] On a shared host: the run has its own `CLAUDE_CONFIG_DIR`, so the account's MCP servers, skills
       and memory stay out. If the CLI then authenticates with an environment token, set
@@ -52,9 +55,9 @@ bash .claude/hooks/goal-bus.sh --status    # where the run is, what was actually
 - Check yourself: sign in once in a browser; the session document holds ciphertext, not a JWT.
   · Commit: `Sign in through the platform into a server-side session, default off`
 
-### G2 — Bearer tokens and roles
-- Step for the bus to adapt into instructions: T021–T029, T059; the uniqueness control.
-- Check yourself: the control's red and green are both quoted. · Commit: `Accept platform tokens on the existing API and derive roles`
+### G2 — Bearer tokens, roles and permissions
+- Step for the bus to adapt into instructions: T021–T029, T059, T065–T069; the uniqueness control, the permission-check control and the token-path control.
+- Check yourself: the controls' red and green are both quoted; a `member` gets 403 on the devices. · Commit: `Accept platform tokens on the existing API, derive roles and decide permissions on the server`
 
 ### G3 — platform events (look at it in person)
 - Step for the bus to adapt into instructions: T030–T036, T060, T061; the signature and window controls.
@@ -65,7 +68,7 @@ bash .claude/hooks/goal-bus.sh --status    # where the run is, what was actually
 - Check yourself: the reverse-order convergence and the two lookup failures. · Commit: `Sync tenants with tombstones and pull devices`
 
 ### G5 — what integrated tenants see (look at it in person)
-- Step for the bus to adapt into instructions: T048–T052; the loop-guard control.
+- Step for the bus to adapt into instructions: T048–T052, T070; the loop-guard control.
 - Check yourself: the two tenants side by side in a browser. · Commit: `Add the web client with one gate, one registry and the loop guard`
 
 ### G6 — closing
@@ -103,7 +106,8 @@ Treat a verdict as suspect when two or more of these hold:
 
 ## 7. After the run
 
-- Commit at goal boundaries and check every commit message against the change it describes.
+- Commit after the run (the exception to constitution I): one commit per goal where the files allow it,
+  with the messages the run proposes in G6, each checked against the change it describes.
 - Disarm: `rm goal-pack/.bus-armed goal-pack/.gate-armed`
 - Keep BUS-LOG.md, BUS-REVIEWS.md, BUS-MEMORY.md, BUS-HANDOFF.md and PROGRESS.md in the repository;
   they are the evidence that makes the run auditable later.
