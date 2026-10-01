@@ -1,0 +1,14 @@
+{
+  "name": "@acme/mock-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.ts"
+  },
+  "dependencies": {
+    "@acme/contracts": "workspace:*",
+    "fastify": "^5",
+    "jose": "^6"
+  }
+}

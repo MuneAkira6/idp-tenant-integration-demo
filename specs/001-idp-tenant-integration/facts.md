@@ -231,3 +231,403 @@ mongo: not found
 
 - What follows: database queries run inside the container, with `docker compose exec mongodb mongosh`.
 - Decisions that depend on it: the goal brief's rule for database evidence.
+
+### F11: Keycloak 26.7.4 imports `${env.NAME}` in a realm file literally; it substitutes nothing
+
+- Measured on: 2026-09-30 / last re-measured: 2026-09-30
+- Measured by: the implementation run, G0 (T004), on the host that runs it
+- Commands (the realm import declared `"secret": "${env.ACME_TASKS_SECRET_TENANT_A}"` for the client
+  `acme-tasks` and `"credentials": [{"type":"password","value":"${env.KEYCLOAK_SEED_PASSWORD}"}]` for
+  alice; the env file held generated values for both names). Three token requests: with the generated
+  values, with the placeholder as the client secret, and with the placeholder as both:
+
+```
+curl -sS --noproxy '*' -o /tmp/tok-a.json -w 'http_code=%{http_code}\n' \
+  -d grant_type=password -d client_id=acme-tasks \
+  --data-urlencode "client_secret=$ACME_TASKS_SECRET_TENANT_A" \
+  -d username=alice --data-urlencode "password=$KEYCLOAK_SEED_PASSWORD" -d scope=openid \
+  http://localhost:18480/realms/tenant-a/protocol/openid-connect/token
+
+curl -sS --noproxy '*' ... --data-urlencode 'client_secret=${env.ACME_TASKS_SECRET_TENANT_A}' \
+  -d username=alice --data-urlencode "password=$KEYCLOAK_SEED_PASSWORD" ...
+
+curl -sS --noproxy '*' ... --data-urlencode 'client_secret=${env.ACME_TASKS_SECRET_TENANT_A}' \
+  -d username=alice --data-urlencode 'password=${env.KEYCLOAK_SEED_PASSWORD}' ...
+```
+
+- Output:
+
+```
+http_code=401
+{"error":"unauthorized_client","error_description":"Invalid client or Invalid client credentials"}
+
+http_code=400
+{"error":"invalid_grant","error_description":"Invalid user credentials"}
+
+http_code=200
+access_token expires_in refresh_expires_in refresh_token token_type id_token not-before-policy session_state scope
+```
+
+- What follows: the second call authenticated the client, so the stored client secret is the literal
+  string `${env.ACME_TASKS_SECRET_TENANT_A}`; the third shows the same for the seeded password. A realm
+  import cannot carry a secret from the environment. Since no secret may be written into this repository
+  (goal-brief.md, red line 5) and the root `.gitignore` is a given file that does not list `.env`, the
+  realm files under `infra/keycloak/realms/` declare no `secret` and no `credentials`, and
+  `scripts/provision.ts` sets both through the admin API after the import, from the env file that
+  `scripts/stack.sh` writes into the OS temp directory.
+- Decisions that depend on it: T002 and T004 (`compose.yaml`, the realm imports, `scripts/stack.sh`);
+  R-15 (secrets only through the environment).
+
+### F12: Without an audience mapper a tenant realm's access token carries no `aud` at all
+
+- Measured on: 2026-09-30 / last re-measured: 2026-09-30
+- Measured by: the implementation run, G0 (T005), on the host that runs it
+- Commands (the realms as first imported, with no protocol mapper on `acme-tasks`; `decode.mjs` prints
+  the JOSE header and the claims research R-2 names, and replaces `sub` with `<uuid>`):
+
+```
+curl -sS --noproxy '*' -d grant_type=password -d client_id=acme-tasks \
+  --data-urlencode "client_secret=$ACME_TASKS_SECRET_TENANT_A" -d username=alice \
+  --data-urlencode "password=$KEYCLOAK_SEED_PASSWORD" -d scope=openid \
+  http://localhost:18480/realms/tenant-a/protocol/openid-connect/token | node decode.mjs
+```
+
+- Output (tenant-a; tenant-b printed the same shape with its own issuer and `preferred_username`):
+
+```
+header: {"alg":"RS256","kid":"AGgS-wAPuAEYdYPFLwsByNmQaPkCuL6M119sPFk0g10","typ":"JWT"}
+payload (selected): {
+  "iss": "http://localhost:18480/realms/tenant-a",
+  "azp": "acme-tasks",
+  "resource_access": {
+    "acme-tasks": {
+      "roles": [
+        "tasks-user"
+      ]
+    }
+  },
+  "exp": 1790753046,
+  "sub": "<uuid>",
+  "preferred_username": "alice"
+}
+```
+
+- What follows: `aud` is not merely different from `acme-tasks-api`, it is absent — the realms define no
+  default roles, so not even Keycloak's usual `account` audience appears. A verifier written from the
+  documentation, expecting `aud` to exist, would have been written against a token that has no such
+  claim. Research R-2 named this case: an audience mapper (`oidc-audience-mapper`, included custom
+  audience `acme-tasks-api`) was added to `acme-tasks` and `acme-tasks-shortlived` in both tenant realms,
+  and to `acme-tasks-sync` in `platform` (audience `platform-api`), and the shapes were measured again
+  (F13, F14, F15).
+- Decisions that depend on it: R-2; the realm imports of T004; the audience check of FR-008.
+
+### F13: The access token of a seeded user of `tenant-a`, with the audience mapper
+
+- Measured on: 2026-09-30 / last re-measured: 2026-09-30
+- Measured by: the implementation run, G0 (T005), on the host that runs it
+- Commands (alice has one client role; carol has roles in two clients, which is the union FR-011 maps):
+
+```
+curl -sS --noproxy '*' -d grant_type=password -d client_id=acme-tasks \
+  --data-urlencode "client_secret=$ACME_TASKS_SECRET_TENANT_A" -d username=alice \
+  --data-urlencode "password=$KEYCLOAK_SEED_PASSWORD" -d scope=openid \
+  http://localhost:18480/realms/tenant-a/protocol/openid-connect/token | node decode.mjs
+
+# the same with -d username=carol
+```
+
+- Output:
+
+```
+header: {"alg":"RS256","kid":"rTo4HOV-RnHukBS3dMuKSoJmJvQIMI8Uvi7KMVezO4M","typ":"JWT"}
+payload (selected): {
+  "iss": "http://localhost:18480/realms/tenant-a",
+  "aud": "acme-tasks-api",
+  "azp": "acme-tasks",
+  "resource_access": {
+    "acme-tasks": {
+      "roles": [
+        "tasks-user"
+      ]
+    }
+  },
+  "exp": 1790753089,
+  "sub": "<uuid>",
+  "preferred_username": "alice"
+}
+header: {"alg":"RS256","kid":"rTo4HOV-RnHukBS3dMuKSoJmJvQIMI8Uvi7KMVezO4M","typ":"JWT"}
+payload (selected): {
+  "iss": "http://localhost:18480/realms/tenant-a",
+  "aud": [
+    "acme-tasks-api",
+    "acme-reports"
+  ],
+  "azp": "acme-tasks",
+  "resource_access": {
+    "acme-tasks": {
+      "roles": [
+        "tasks-user"
+      ]
+    },
+    "acme-reports": {
+      "roles": [
+        "reports-admin"
+      ]
+    }
+  },
+  "exp": 1790753089,
+  "sub": "<uuid>",
+  "preferred_username": "carol"
+}
+```
+
+- What follows: the tenant is named by `iss`, exactly as FR-005 needs. **`aud` is a string when there is
+  one audience and an array when there are several**: carol's token gained `acme-reports` because she
+  holds a role in that client, so the verifier must accept both forms — this is the single most
+  load-bearing shape in the measurement. `azp` is the client that asked, `acme-tasks`. `resource_access`
+  is keyed by client id, and a user's roles across clients appear together, which is the union FR-011
+  maps. `exp` is Unix seconds (300 s after issue, the realm's `accessTokenLifespan`).
+- Decisions that depend on it: R-2, R-4 (the `jose` verifier's `iss`, `aud` and `exp` checks), R-18 and
+  FR-011 (role derivation reads `resource_access`), and the frozen types of `packages/contracts`.
+
+### F14: The access token of a seeded user of `tenant-b`
+
+- Measured on: 2026-09-30 / last re-measured: 2026-09-30
+- Measured by: the implementation run, G0 (T005), on the host that runs it
+- Command:
+
+```
+curl -sS --noproxy '*' -d grant_type=password -d client_id=acme-tasks \
+  --data-urlencode "client_secret=$ACME_TASKS_SECRET_TENANT_B" -d username=bob \
+  --data-urlencode "password=$KEYCLOAK_SEED_PASSWORD" -d scope=openid \
+  http://localhost:18480/realms/tenant-b/protocol/openid-connect/token | node decode.mjs
+```
+
+- Output:
+
+```
+header: {"alg":"RS256","kid":"7bfhVCoGJ0xMNcJrVHub3CgRNiDaOY59iLdzuYF2l8U","typ":"JWT"}
+payload (selected): {
+  "iss": "http://localhost:18480/realms/tenant-b",
+  "aud": "acme-tasks-api",
+  "azp": "acme-tasks",
+  "resource_access": {
+    "acme-tasks": {
+      "roles": [
+        "tasks-user"
+      ]
+    }
+  },
+  "exp": 1790753089,
+  "sub": "<uuid>",
+  "preferred_username": "bob"
+}
+```
+
+- What follows: the second tenant realm produces the same shape under its own issuer and its own signing
+  key, so one verifier serves both and the issuer alone separates the tenants (FR-005). The audience
+  `acme-tasks-api` is the same string in both realms, so `PLATFORM_AUDIENCE` is one setting.
+- Decisions that depend on it: R-2, R-4; FR-005, FR-008.
+
+### F15: The client-credentials access token of `acme-tasks-sync` in the `platform` realm
+
+- Measured on: 2026-09-30 / last re-measured: 2026-09-30
+- Measured by: the implementation run, G0 (T005), on the host that runs it
+- Command:
+
+```
+curl -sS --noproxy '*' -d grant_type=client_credentials -d client_id=acme-tasks-sync \
+  --data-urlencode "client_secret=$ACME_TASKS_SYNC_SECRET" \
+  http://localhost:18480/realms/platform/protocol/openid-connect/token | node decode.mjs
+```
+
+- Output:
+
+```
+header: {"alg":"RS256","kid":"j0q5WCYrA-SoZcex5Qj4gsdQc5eJ6Sgx2uMddIS7kus","typ":"JWT"}
+payload (selected): {
+  "iss": "http://localhost:18480/realms/platform",
+  "aud": [
+    "platform-api",
+    "account"
+  ],
+  "azp": "acme-tasks-sync",
+  "resource_access": {
+    "account": {
+      "roles": [
+        "manage-account",
+        "manage-account-links",
+        "view-profile"
+      ]
+    }
+  },
+  "exp": 1790753089,
+  "sub": "<uuid>",
+  "preferred_username": "service-account-acme-tasks-sync"
+}
+```
+
+- What follows: the lookup token the API sends to the mock platform (R-9) is issued by a different
+  issuer from any tenant token, so a service token can never be mistaken for a user token. Its `aud`
+  is an array containing `platform-api`, and `account` is there as well because a service-account user
+  keeps Keycloak's default account roles — which is also why this realm's token has an `aud` at all
+  while a tenant token had none before the mapper (F12). `resource_access` carries no application role:
+  the mock authorises this caller by `azp`/`aud`, not by a role.
+- Decisions that depend on it: R-9 and the tenant lookup of FR-020; the mock's Bearer check in
+  contracts/platform.md.
+
+### F16: Each realm publishes exactly one RS256 signing key, beside an RSA-OAEP encryption key
+
+- Measured on: 2026-09-30 / last re-measured: 2026-09-30
+- Measured by: the implementation run, G0 (T005), on the host that runs it
+- Command:
+
+```
+for r in platform tenant-a tenant-b; do
+  echo "=== $r ==="
+  curl -sS --noproxy '*' "http://localhost:18480/realms/$r/protocol/openid-connect/certs" \
+   | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);for(const k of j.keys)console.log(`kid=${k.kid} kty=${k.kty} alg=${k.alg} use=${k.use}`)})'
+done
+```
+
+- Output:
+
+```
+=== platform ===
+kid=ARAMz7uuM4n-gNuFOgObbKU4FrkUe-Jp29uagQi2_gU kty=RSA alg=RSA-OAEP use=enc
+kid=j0q5WCYrA-SoZcex5Qj4gsdQc5eJ6Sgx2uMddIS7kus kty=RSA alg=RS256 use=sig
+=== tenant-a ===
+kid=HetA_vF9vu6_473mb8VjrgCWoUWMwGcrBKKm3GtbRcw kty=RSA alg=RSA-OAEP use=enc
+kid=rTo4HOV-RnHukBS3dMuKSoJmJvQIMI8Uvi7KMVezO4M kty=RSA alg=RS256 use=sig
+=== tenant-b ===
+kid=7bfhVCoGJ0xMNcJrVHub3CgRNiDaOY59iLdzuYF2l8U kty=RSA alg=RS256 use=sig
+kid=p6_XBS9hMl0YTvHyRcBbFWVDj3VKAa19IruJSa_nERY kty=RSA alg=RSA-OAEP use=enc
+```
+
+- What follows: the signing `kid`s are the ones the tokens of F13, F14 and F15 carry in their headers,
+  and each realm has its own. The JWKS also lists an `enc` key, so a verifier must select by `use`/`alg`
+  and not take the first key. The `kid`s are generated per realm creation, so they change whenever the
+  stack is recreated with `down -v`: nothing may hard-code them, and R-4's "one refetch on an unknown
+  `kid`" is the only way a rotated key is picked up.
+- Decisions that depend on it: R-4 (`createRemoteJWKSet` per issuer, refetch on an unknown `kid`);
+  AC-13.
+
+### F17: Playwright 1.62.1 does not hand a server-redirected request to a route handler
+
+- Measured on: 2026-09-30 / last re-measured: 2026-09-30
+- Measured by: the implementation run, G1 (T064), on the host that runs it
+- Commands: two probe specs run with `pnpm e2e`. The first navigates straight to the web origin, which
+  nothing listens on; the second completes the real sign-in, whose last hop is a 302 from the API to
+  that same origin. Both register the same handler before navigating:
+
+```
+await context.route('http://localhost:18401/**', (route) => {
+  console.log('ROUTED', route.request().url())
+  return route.fulfill({ status: 200, contentType: 'text/html', body: 'landing' })
+})
+
+# probe 1
+await page.goto('http://localhost:18401/board')
+
+# probe 2 — the sign-in of quickstart Q1, with every response and failure logged
+await page.goto('http://localhost:18400/auth/login?tenant=tenant-a')
+await page.fill('#username', 'alice'); await page.fill('#password', <from the env file>)
+await page.click('#kc-login')
+```
+
+- Output (probe 2's log cut to the last three lines; the Keycloak stylesheet and font requests are
+  omitted):
+
+```
+# probe 1
+direct nav url= http://localhost:18401/board seen= ["http://localhost:18401/board"]
+  ✓  1 [chromium] › tests/e2e/__probe.spec.ts:3:1 › route interception on a redirected top-level navigation (95ms)
+
+# probe 2
+RES 302 http://localhost:18480/realms/tenant-a/login-actions/authenticate?session_code=s3Ari21obgK
+RES 302 http://localhost:18400/auth/callback?state=01nVR4SHqCXVqbVxVdV34kVldfqHYR9jEUzlnxwngbA&ses
+FAILED http://localhost:18401/board net::ERR_CONNECTION_REFUSED
+FINAL URL chrome-error://chromewebdata/
+```
+
+- What follows: the identical handler fires for a direct navigation (`ROUTED` printed, `seen` holds the
+  URL) and does not fire for the same URL reached by a server redirect — no `ROUTED` line, and the
+  browser hits the dead origin itself. Intercepting the whole chain with `context.route('**/*', …)` and
+  `route.continue()` on the other origins was tried as well and changed nothing. So while the web
+  client does not exist, a landing on a dead origin cannot be stubbed: T064 catches the landing with
+  `page.waitForRequest('http://localhost:18401/board')` and asserts `isNavigationRequest()`, which
+  observes that the browser was sent there, and leaves the rendered page to G5.
+- Decisions that depend on it: T064's design (E2E of SC-001); re-examined in G5, when `apps/web` is
+  listening on 18401 and the landing can simply be navigated to.
+
+### F18: `resource_access` is in Keycloak's access token and not in its ID token
+
+- Measured on: 2026-09-30 / last re-measured: 2026-09-30
+- Measured by: the implementation run, G2 (T029), on the host that runs it
+- Command (one token response for carol, who holds a role in two clients, with both of its tokens
+  decoded side by side):
+
+```
+curl -sS --noproxy '*' -d grant_type=password -d client_id=acme-tasks \
+  --data-urlencode "client_secret=$ACME_TASKS_SECRET_TENANT_A" -d username=carol \
+  --data-urlencode "password=$KEYCLOAK_SEED_PASSWORD" -d scope=openid \
+  http://localhost:18480/realms/tenant-a/protocol/openid-connect/token \
+ | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);
+const dec=t=>JSON.parse(Buffer.from(t.split(".")[1],"base64url").toString());
+const a=dec(j.access_token), i=dec(j.id_token);
+console.log("access_token.resource_access =", JSON.stringify(a.resource_access));
+console.log("id_token.resource_access     =", JSON.stringify(i.resource_access));
+console.log("id_token keys =", Object.keys(i).join(" "));})'
+```
+
+- Output:
+
+```
+access_token.resource_access = {"acme-tasks":{"roles":["tasks-user"]},"acme-reports":{"roles":["reports-admin"]}}
+id_token.resource_access     = undefined
+id_token keys = exp iat jti iss aud sub typ azp sid at_hash acr email_verified name preferred_username given_name family_name email
+```
+
+- What follows: the roles of FR-011 are in the **access** token; the ID token has no `resource_access`
+  key at all. F13 measured the access token, so the recorded shape was right, but the sign-in path
+  first read the ID token — the only token the authorisation code flow verifies — and derived an empty
+  set of roles for every user, which the permission check then turned into 403 on every operation. The
+  callback now derives from the access token's claims (`apps/api/src/auth/platform.ts`,
+  `CallbackResult.accessClaims`), read rather than re-verified: it arrives in the same token-endpoint
+  response as the ID token that was verified, over the back channel. The tenant still comes from the
+  ID token's `iss` (FR-005). The alternative, a Keycloak protocol mapper that copies the client roles
+  into the ID token, was not taken: it would change the realm imports to work around reading the token
+  that already has the claim.
+- Decisions that depend on it: T029 and FR-011 to FR-013 (role derivation at sign-in); AC-14, AC-15,
+  AC-16; the permission rows AC-40 to AC-42, which fail for every role without it.
+
+### F19: A token from a second client of the same realm carries `aud` naming that client, not our API
+
+- Measured on: 2026-09-30 / last re-measured: 2026-09-30
+- Measured by: the implementation run, G2 (T022), on the host that runs it
+- Command:
+
+```
+curl -sS --noproxy '*' -d grant_type=password -d client_id=acme-reports \
+  --data-urlencode "client_secret=$ACME_REPORTS_SECRET_TENANT_A" -d username=alice \
+  --data-urlencode "password=$KEYCLOAK_SEED_PASSWORD" -d scope=openid \
+  http://localhost:18480/realms/tenant-a/protocol/openid-connect/token | node decode.mjs
+```
+
+- Output:
+
+```
+{
+ "iss": "http://localhost:18480/realms/tenant-a",
+ "aud": "acme-tasks",
+ "azp": "acme-reports"
+}
+```
+
+- What follows: quickstart Q5's "wrong audience" case has a real token to use. `acme-reports` carries
+  no audience mapper, so its token is addressed to `acme-tasks` — the *client id* of the other client,
+  a plain string, and not `acme-tasks-api`. Same issuer, same realm, valid signature, unexpired: only
+  the audience separates it from an acceptable token, which is what makes it the right negative case
+  for FR-008. Together with F13's array form it confirms that the audience check must be containment
+  over `audiences()` and never an equality test against a string.
+- Decisions that depend on it: T022 and AC-10; the audience check of `apps/api/src/auth/bearer.ts`.

@@ -1,8 +1,13 @@
 # Contract: the platform stand-in (`apps/mock-platform`, port 18402)
 
-The mock plays the group platform's event delivery, tenant API and device API; Keycloak plays its IdP
-(research R-1). Frozen in G0 as part of `packages/contracts`, so the mock and the API share one set of
-shapes.
+**AS-BUILT, 2026-09-30.** The mock plays the group platform's event delivery, tenant API and device
+API; Keycloak plays its IdP (research R-1). Frozen in G0 as part of `packages/contracts`, so the mock
+and the API share one set of shapes.
+
+**AS-BUILT** — the mock imports only from `packages/contracts` and never from `apps/api`. It builds its
+signatures from the frozen `signaturePayload` and `SIGNATURE_PREFIX` with its own HMAC, so the two
+sides agreeing is an observation about the contract rather than an artefact of a shared
+implementation.
 
 ## Events it sends
 
@@ -40,11 +45,22 @@ Bodies:
 `acme-tasks-sync` client (client credentials), verified by the mock against that realm's JWKS.
 200 `{tenantId, name, issuer}`; 403 when refused; 404 when unknown.
 
+**AS-BUILT** — what the mock checks in that token is `azp` and the audience, not a role: facts.md F15
+measured that a service-account token's `resource_access` holds only Keycloak's own `account` roles,
+so there is nothing role-shaped to check. `unreachable` is produced by destroying the connection, so
+the caller sees a transport failure and not a status code — which is what lets FR-021 tell "the
+platform said no" from "the platform said nothing".
+
 ## Device API
 
 `GET /tenants/:tenantId/devices?page=<n>&pageSize=200` — same authentication. 200
 `{items:[{deviceId, name, model}], page, pageSize, total}`. The seeded tenants have 450, 3 and 0 devices,
 so one tenant needs three pages.
+
+**AS-BUILT** — the counts are `tenant-a` 450, `tenant-b` 3 and `tenant-c` 0, and any other tenant is 0.
+A pull stops at a short or empty page. `fail-on-page` answers 500 for exactly the page named, which is
+an unreachable answer rather than a refusal, so the pull records `lastError` and `lastAttemptAt` and
+keeps `lastSuccessAt` (FR-024).
 
 ## Subscriptions
 

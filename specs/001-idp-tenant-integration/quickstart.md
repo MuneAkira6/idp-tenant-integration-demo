@@ -1,7 +1,13 @@
 # Quickstart: validate the integration end to end
 
-Phase 1 of [plan.md](plan.md). A run guide, not an implementation: it names what to run and what must
-be observed. Shapes are in [contracts/](contracts/api.md) and [data-model.md](data-model.md).
+**AS-BUILT, 2026-09-30.** Phase 1 of [plan.md](plan.md). A run guide, not an implementation: it names
+what to run and what must be observed. Shapes are in [contracts/](contracts/api.md) and
+[data-model.md](data-model.md).
+
+Two statements were rewritten in G6 because the implementation run measured them to be wrong; both are
+marked **AS-BUILT** where they appear, and both have an entry with its measurement in the Contract
+changes table of [goal-pack/PROGRESS.md](../../goal-pack/PROGRESS.md). Nothing else in this file
+changed.
 
 ## 1. Prerequisites
 
@@ -11,13 +17,30 @@ Docker with Compose, Node 24, pnpm pinned by `packageManager` (through corepack 
 ## 2. Start
 
 ```bash
-docker compose up -d          # Keycloak 26.7.4 with the three realms, MongoDB 7
+pnpm stack:up                 # Keycloak 26.7.4 with the three realms, MongoDB 7
 pnpm install
+pnpm seed                     # the tenant that is not integrated, `local`, with its users and tasks
 pnpm test                     # unit and integration tests (the apps are started by the tests)
 pnpm e2e                      # browser flows (Playwright starts api, web and mock-platform)
 ```
 
-`.env.example` lists every setting with a dummy value; the test setup generates fresh secrets per run.
+**AS-BUILT**: the first line was `docker compose up -d`. It does not start a half-configured stack —
+it does not start at all. `compose.yaml` interpolates `${KC_BOOTSTRAP_ADMIN_USERNAME:?…}` and
+`${KC_BOOTSTRAP_ADMIN_PASSWORD:?…}`, so without an env file Compose stops before creating anything
+(measured: `docker compose config` exits 1 with `required variable KC_BOOTSTRAP_ADMIN_USERNAME is
+missing a value`). `pnpm stack:up` generates the secrets into `${TMPDIR:-/tmp}/acme-idp-demo.env` with
+mode 600, passes it with `--env-file`, waits for both services to be healthy, and then runs
+`scripts/provision.ts`, which sets the realms' client secrets and the seeded users' passwords through
+Keycloak's admin API — because Keycloak 26.7.4 stores `${env.NAME}` in a realm import verbatim instead
+of substituting it (facts.md, F11).
+
+**AS-BUILT**: `pnpm seed` was not in this list and is required. `local` is the baseline for FR-031,
+and one test asserts it in the **live** `acme_tasks` database — tenant `local`, not integrated, active,
+3 users, 4 tasks, 0 sessions. Without the seed that test fails on a stack brought up from nothing, so
+the sequence above did not reproduce. It comes after `pnpm install` because it needs `node_modules`.
+
+`.env.example` lists every setting with a dummy value; the test setup generates fresh secrets per run,
+and no secret is written into this repository.
 
 ## 3. Scenarios and what must be observed
 
@@ -46,7 +69,7 @@ pnpm e2e                      # browser flows (Playwright starts api, web and mo
 
 | Guard | Control that must fail without it |
 |---|---|
-| partial unique index on first contact | Q6 with the index dropped → more than one user |
+| partial unique index on first contact | **AS-BUILT**: Q6 with **both** unique indexes of `users` dropped → eight users. Dropping only the partial unique index of research R-8 leaves **one**: `users` also carries `users_tenant_email_unique` over `{ tenantId, email }` (data-model.md), and a first contact for one platform subject always carries the same address, so that index rejects the duplicate instead — measured, with the rejection naming it (`E11000 … users_tenant_email_unique`). R-8's index is still the correct guard for FR-010, because the platform subject is the stable key and the e-mail index only coincides with it at first contact. The control also forces the interleaving with a barrier: eight parallel HTTP requests do not contend at the database on this host. |
 | signature verification | Q8 with verification bypassed in a test build → the forged event is applied |
 | timestamp window | Q8 with the window set to "unlimited" in the test → the stale event is applied |
 | loop guard | Q14 with the guard switched off in the test → the browser bounces more than twice within 60 s |

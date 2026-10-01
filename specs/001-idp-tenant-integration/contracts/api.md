@@ -1,7 +1,13 @@
 # Contract: the Acme Tasks API (`apps/api`, port 18400)
 
-Frozen in G0 as `packages/contracts` (types) and rewritten as AS-BUILT in G6. Every route names the
-requirements it serves. Error bodies are `{"error":"<code>","message":"<text>"}`.
+**AS-BUILT, 2026-09-30.** Frozen in G0 as `packages/contracts` (types) and rewritten here in G6 to
+describe what was built. Every route names the requirements it serves. Error bodies are
+`{"error":"<code>","message":"<text>"}`.
+
+Differences from the frozen version are marked **AS-BUILT** where they appear. Each one is a statement
+the run measured to be wrong or incomplete, not a change of design; the measurements are in
+[facts.md](../facts.md) and the reasons in the Contract changes table of
+[goal-pack/PROGRESS.md](../../../goal-pack/PROGRESS.md).
 
 ## Sign-in and session
 
@@ -15,6 +21,16 @@ requirements it serves. Error bodies are `{"error":"<code>","message":"<text>"}`
 
 Refresh (inside the API, not a route): a refused refresh (`invalid_grant`) ends the session; a network
 error or a 5xx keeps it and sets `refreshRetryAt`.
+
+**AS-BUILT** — where the roles come from at sign-in: `resource_access` is in the **access** token and
+not in the ID token, which is the only token the authorisation code flow verifies (facts.md, F18). The
+callback therefore derives the roles of FR-011 from the access token's claims, read rather than
+re-verified because they arrive in the same token-endpoint response as the verified ID token, over the
+back channel. The tenant still comes from the ID token's `iss` alone (FR-005).
+
+**AS-BUILT** — who calls the refresh: the classification above runs from the hourly `sessions.refresh`
+job of `apps/api/src/scheduler.ts`, over sessions whose `refreshRetryAt` has passed. Until G4 nothing
+in the running system called it.
 
 ## The existing API (one more way in, one new route, and permissions)
 
@@ -33,6 +49,18 @@ creation of a user seen for the first time (partial unique index; duplicate key 
 expired, wrongly addressed or unknown-issuer token: 401 `invalid_token`. With no issuer configured,
 every token: 401. (FR-007–FR-010, FR-029, FR-034)
 
+**AS-BUILT** — the audience check is **containment**, not equality. `aud` was measured as a plain
+string for a user with one client role and as an array for one with roles in two clients
+(facts.md, F13), and a token from a second client of the same realm carries `aud` naming that client
+(F19). `audiences()` in `packages/contracts/src/tokens.ts` is the only reader of both forms.
+
+**AS-BUILT** — `exp` is judged against the injectable clock (research R-11), so the running system uses
+real time and a test advances the clock instead of waiting out a token's lifetime.
+
+**AS-BUILT** — what a first contact over the Bearer path stores: the **lowest** application role, not
+the roles derived from the token. FR-034 forbids writing the derived ones, and a browser sign-in
+replaces the stored roles at its next sign-in (FR-011).
+
 Permissions, after authentication and before the handler: the route's operation is compared with the
 principal's roles through the permission table of data-model.md; without the permission, 403
 `forbidden` and nothing changes. Every query is confined to the principal's tenant. (FR-033, FR-035)
@@ -42,6 +70,20 @@ principal's roles through the permission table of data-model.md; without the per
 | Route | Behaviour | FR |
 |---|---|---|
 | `POST /webhooks/platform` | tagged as a webhook route; verifies `X-Platform-Signature` over `${X-Platform-Timestamp}.${raw body}` with the secret of `X-Platform-Event` (constant time); 401 `bad_signature` or `stale_timestamp` (more than 300 s off); stores the delivery under `X-Platform-Delivery` and answers 200 before processing; a repeated delivery id answers 200 with no second effect; an unknown event type is stored as `ignored` and answers 200; with no secret for the type: 401 `not_configured` | FR-014–FR-017, FR-029 |
+
+**AS-BUILT** — the order of the guards, which the text above leaves open: the secret is looked up
+first (FR-029), then the signature is verified, then the timestamp window. The signature comes before
+the timestamp on purpose — the timestamp is part of what is signed, so until the signature matches
+there is no reason to believe the timestamp either.
+
+**AS-BUILT** — the raw bytes are kept by a content-type parser registered on the whole instance
+(`parseAs: 'buffer'`), so what is verified is what arrived and never a re-serialisation of the parsed
+body.
+
+**AS-BUILT** — a secret may be configured for an event type the application does not handle, and that
+is the `ignored` case above. `config.webhookSecrets` is therefore keyed by the environment variable's
+own name rather than by event type; `webhookSecretFor(config, eventType)` translates with
+`webhookSecretEnvName` from `packages/contracts`.
 
 ## Event types handled
 
@@ -54,3 +96,35 @@ principal's roles through the permission table of data-model.md; without the per
 
 On start-up the API upserts one subscription per event type with the mock platform, the callback URL
 built from its own route table (routes tagged as webhooks), and runs the inbox sweep. (FR-017, FR-018)
+
+**AS-BUILT** — start-up then starts the scheduler, which is the one place all recurring work is
+registered (`apps/api/src/scheduler.ts`, FR-032):
+
+| Job | Interval | Serves |
+|---|---|---|
+| `inbox.sweep` | 1 h | deliveries stored but not processed (FR-017) |
+| `tenantLookups.retry` | 1 h | lookups that could not reach the platform (FR-021) |
+| `devices.pull` | 1 h | each integrated tenant's devices (FR-023) |
+| `sessions.refresh` | 1 h | sessions whose `refreshRetryAt` has passed (FR-004) |
+| `expiries` | 30 days | pending lookups, and deleted tenants' data (FR-021, FR-022) |
+
+`inbox.start()` performs the **start-up** sweep only; the hourly one is the scheduler's job, so that
+the recurring work can be read in one list. A delivery whose processing throws is left with
+`processedAt` unset and is owned by that sweep and by nothing else; a delivery waiting on a tenant
+lookup is marked processed with `outcome: 'pending'` and is owned by `tenantLookups.nextAttemptAt`
+instead, so the two retry mechanisms never both claim a delivery.
+
+## Test-only switches (AS-BUILT)
+
+Five behaviours can be switched off, and only from a test. They are parameters of `buildApi`
+(`ApiDeps.testControls`); `main()` never sets them, and there is no path from the environment to any of
+them — nothing reads `process.env` to decide. Each one exists to make a guard of quickstart §4 show
+red, and each is used in a test that says it is a control.
+
+| Switch | Turns off | The control of quickstart §4 it serves |
+|---|---|---|
+| `disablePermissionCheck` | the one permission check before every handler (FR-033) | Q16 with the check switched off → the `member` reads the devices |
+| `readRolesFromStoredUser` | reading a token principal's roles from the token (FR-034) | Q17 with the roles read from the stored user → the second call still answers 200 |
+| `skipNotConfiguredGuard` | the "nothing configured, nothing accepted" guard (FR-029) | not a quickstart control: it re-proves AC-7's token and event arms, by showing how far a genuine token or delivery gets without the guard |
+| `skipSignatureCheck` | the webhook signature check (FR-014) | Q8 with verification bypassed → the forged event is applied |
+| `unlimitedTimestampWindow` | the 300 s timestamp window (FR-015) | Q8 with the window unlimited → the stale event is applied |

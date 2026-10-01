@@ -1,6 +1,6 @@
 # idp-tenant-integration-demo — scope of the implementation run
 
-**Contract status: DRAFT.** Frozen in G0 (content unchanged, date added); rewritten as AS-BUILT in G6.
+**Contract status: FROZEN 2026-09-30.** Frozen in G0 (content unchanged, date added); rewritten as AS-BUILT in G6.
 
 **The requirement is the spec folder, not this file** (constitution II):
 [spec.md](../specs/001-idp-tenant-integration/spec.md) with its Clarifications, its Permissions section

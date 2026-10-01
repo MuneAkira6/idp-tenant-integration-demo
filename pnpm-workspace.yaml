@@ -1,0 +1,10 @@
+# Supply-chain settings of goal-pack/goal-brief.md, measured in facts F8 and F9:
+# packages must be at least 3 days old (4320 minutes), no dependency may run a build
+# script, and the allow-list stays empty (Rsbuild 2 needs no entry; Rsbuild 1 would).
+packages:
+  - apps/*
+  - packages/*
+
+minimumReleaseAge: 4320
+strictDepBuilds: true
+allowBuilds: {}

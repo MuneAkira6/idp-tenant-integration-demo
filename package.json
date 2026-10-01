@@ -1,0 +1,32 @@
+{
+  "name": "idp-tenant-integration-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.28.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "lint": "biome check --error-on-warnings .",
+    "lint:fix": "biome check --write --error-on-warnings .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "seed": "bash scripts/stack.sh seed",
+    "stack:up": "bash scripts/stack.sh up",
+    "stack:down": "bash scripts/stack.sh down",
+    "stack:ps": "bash scripts/stack.sh ps",
+    "build:web": "pnpm --filter @acme/web build",
+    "dev:web": "pnpm --filter @acme/web dev"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2",
+    "@playwright/test": "1.62.1",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^7",
+    "vitest": "^5"
+  }
+}
