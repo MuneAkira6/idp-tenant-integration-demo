@@ -27,7 +27,12 @@ test('tenant-a hides the three functions the platform owns and lands on /board',
 
   await page.waitForURL(`${WEB}/board`)
   await expect(page.getByTestId('page-board')).toBeVisible()
-  await expect(page.getByTestId('shell-integrated')).toHaveText('true')
+  await expect(page.getByTestId('shell-integrated')).toHaveAttribute('data-integrated', 'true')
+  // The header is for people: the tenant, how the user signed in, and Sign out — never Sign in.
+  await expect(page.getByTestId('shell')).toContainText('Tenant tenant-a')
+  await expect(page.getByTestId('shell')).toContainText('signed in with the group account')
+  await expect(page.getByTestId('sign-out')).toBeVisible()
+  await expect(page.getByTestId('shell').getByRole('button', { name: 'Sign in' })).toHaveCount(0)
 
   // The three pages are not reachable, even by typing the address.
   for (const owned of OWNED_BY_THE_PLATFORM) {
@@ -46,6 +51,12 @@ test('tenant-a hides the three functions the platform owns and lands on /board',
   await expect(page.getByTestId('users')).toBeVisible()
   await expect(page.getByTestId('section-pending-invitations')).toHaveCount(0)
 
+  // Sign out from the header: back on the sign-in page, and the API no longer knows the session.
+  await page.getByTestId('sign-out').click()
+  await page.waitForURL(`${WEB}/signin`)
+  const after = await page.request.get(`${WEB}/auth/session`)
+  expect(await after.json()).toMatchObject({ signedIn: false })
+
   await context.close()
 })
 
@@ -57,7 +68,9 @@ test('local sees all of them and lands on /home', async ({ browser }) => {
 
   await page.waitForURL(`${WEB}/home`)
   await expect(page.getByTestId('page-home')).toBeVisible()
-  await expect(page.getByTestId('shell-integrated')).toHaveText('false')
+  await expect(page.getByTestId('shell-integrated')).toHaveAttribute('data-integrated', 'false')
+  await expect(page.getByTestId('shell')).toContainText('Tenant local')
+  await expect(page.getByTestId('shell')).toContainText('signed in with a password')
 
   // Every page the integrated tenant hides renders here.
   for (const owned of OWNED_BY_THE_PLATFORM) {

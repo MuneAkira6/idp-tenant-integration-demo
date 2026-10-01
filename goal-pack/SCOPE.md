@@ -1,6 +1,9 @@
 # idp-tenant-integration-demo — scope of the implementation run
 
-**Contract status: FROZEN 2026-09-30.** Frozen in G0 (content unchanged, date added); rewritten as AS-BUILT in G6.
+**Contract status: FROZEN 2026-09-30.** Frozen in G0 (content unchanged, date added). Not rewritten in
+G6: the run's as-built contracts are `packages/contracts` and `specs/…/contracts/*.md` (AC-37), and the
+rules this file states held for the whole run. What a human changed after the run is listed in "Changes
+after the run" at the end.
 
 **The requirement is the spec folder, not this file** (constitution II):
 [spec.md](../specs/001-idp-tenant-integration/spec.md) with its Clarifications, its Permissions section
@@ -63,3 +66,27 @@ heading, and each goal's tables end with its tally (goal-brief.md, Definition of
 
 Anything the spec does not ask for; production hardening beyond the spec; other IdPs; a real platform;
 the two criteria of the ticket that the disposition table excludes.
+
+## Changes after the run
+
+Made by a human on 2026-10-01, after the bus had answered DONE; not reviewed by the bus.
+
+1. **One commit, not one per goal.** Every goal touched files that later goals changed again
+   (`apps/api/src/server.ts` in each of G1–G5, the ledger in all seven), so a commit per goal would
+   have invented intermediate trees that were never tested. The constitution's exception asks for one
+   commit per goal *where the files allow it*; they do not, so the run's tree is one commit. The seven
+   proposed messages stay in PROGRESS.md as the record of what each goal did.
+2. **AC-36 re-run by the human.** From a freshly unpacked copy of the working tree on the run's host,
+   README §2 as written (`pnpm stack:up`, `pnpm install`, `pnpm seed`, `pnpm test`, `pnpm e2e`), then
+   both suites again: `Tests  186 passed (186)` and `8 passed` twice; `pnpm lint` and `pnpm typecheck`
+   clean; after `pnpm stack:down -v`, no container, volume or network of the project, and the listening
+   ports exactly those of facts.md F5. This was the one claim the bus could not check itself.
+3. **The web header decided** (Incidental finding 6, a question about what the user sees, which the run
+   correctly left to a human). The author chose a header that reads as text: `Tenant <id>` and "signed in
+   with the group account" or "signed in with a password", and a **Sign out** button that calls
+   `POST /auth/logout` and reloads on `/signin`. The values the tests read moved to `data-integrated`;
+   `tests/e2e/visibility.spec.ts` now also asserts the header text, the absence of a Sign in button and
+   that signing out ends the session.
+4. **README.md restructured** into the seven sections every repository of this portfolio uses, with the
+   signature line. The goal pack named "the seven sections" without listing them, which is how the run
+   came to choose its own; the content is the run's, moved, not rewritten.

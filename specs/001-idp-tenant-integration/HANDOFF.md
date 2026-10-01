@@ -162,3 +162,11 @@ an integrated tenant, and SAML — are excluded with their reasons in spec.md's 
 Commit the working tree, one commit per goal, using the proposed messages in
 `goal-pack/PROGRESS.md` and checking each message against the change it describes. Nothing else can
 be reviewed, bisected or reverted until that is done.
+
+---
+
+**After the run (2026-10-01, by the human who took this over).** Part 8 is done, as one commit rather
+than seven, because every goal touched files later goals changed again; the open question of part 7
+is decided (a labelled header with Sign out); AC-36 was re-run from a fresh tree, twice, green. The
+details are in `goal-pack/SCOPE.md`, "Changes after the run". The parts above are left as the run
+wrote them.

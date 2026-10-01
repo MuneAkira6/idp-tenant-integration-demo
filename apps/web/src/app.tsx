@@ -8,7 +8,8 @@
 
 import type { PageId } from '@acme/contracts'
 import type { ReactNode } from 'react'
-import { Navigate, Route, Routes, useNavigate } from 'react-router'
+import { Navigate, Route, Routes } from 'react-router'
+import { signOut } from './api.ts'
 import { AuthGate, useSession } from './auth/gate.tsx'
 import {
   BoardPage,
@@ -35,16 +36,34 @@ function Landing(): ReactNode {
   return <Navigate to={landingFor(session)} replace />
 }
 
+/**
+ * The header of a signed-in page: which tenant, how the user signed in, and the way out. The raw
+ * values the tests read stay on data attributes; the visible text is for people.
+ */
 function Shell({ children }: { children: ReactNode }): ReactNode {
   const session = useSession()
-  const navigate = useNavigate()
+  // A full navigation after sign-out, so that no part of the client keeps the old session.
+  const leave = async (): Promise<void> => {
+    await signOut()
+    window.location.assign('/signin')
+  }
   return (
     <main>
       <header data-testid="shell">
-        <span data-testid="shell-tenant">{session.tenantId}</span>
-        <span data-testid="shell-integrated">{String(session.integrated)}</span>
-        <button type="button" data-testid="go-signin" onClick={() => navigate('/signin')}>
-          Sign in
+        <span>
+          Tenant <strong data-testid="shell-tenant">{session.tenantId}</strong>
+        </span>{' '}
+        <span data-testid="shell-integrated" data-integrated={String(session.integrated)}>
+          {session.integrated ? 'signed in with the group account' : 'signed in with a password'}
+        </span>{' '}
+        <button
+          type="button"
+          data-testid="sign-out"
+          onClick={() => {
+            void leave()
+          }}
+        >
+          Sign out
         </button>
       </header>
       {children}
