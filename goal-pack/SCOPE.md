@@ -90,3 +90,13 @@ Made by a human on 2026-10-01, after the bus had answered DONE; not reviewed by 
 4. **README.md restructured** into the seven sections every repository of this portfolio uses, with the
    signature line. The goal pack named "the seven sections" without listing them, which is how the run
    came to choose its own; the content is the run's, moved, not rewritten.
+5. **A CI workflow and PUBLISHING.md added** (2026-10-05). Every repository of this portfolio has both;
+   this goal pack asked for neither, which was the pack's omission, not the run's. The workflow runs the
+   steps of README §2 on `ubuntu-24.04` with the Compose stack; it passes actionlint 1.7.12 with no
+   findings and has not run on GitHub. Its steps were run in its order on the run's host, from a fresh
+   copy of the working tree (2026-10-05): `pnpm install --frozen-lockfile`, `pnpm lint` (87 files),
+   `pnpm typecheck`, `pnpm stack:up` (25 s), `pnpm seed`, `pnpm test` (`Test Files 25 passed`, `Tests
+   186 passed`), `pnpm exec playwright install chromium` (the one CI-only step, without `--with-deps`
+   there), `pnpm e2e` (`8 passed`) and `pnpm stack:down -v`, every one exit 0; afterwards no container,
+   volume or network of `acme-idp-demo` and no listener on the demo's ports. The env file was removed
+   by hand afterwards, as README「制約・既知の限界」says it must be.

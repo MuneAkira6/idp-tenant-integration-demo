@@ -1,0 +1,78 @@
+# This repository's CI: the steps of README「動かし方」on a fresh runner, with the Compose stack it
+# needs.
+#
+# Added by a human after the run (goal-pack/SCOPE.md, "Changes after the run", item 5). It has not run
+# on GitHub yet. The same commands, in this order, were run on the host the demo was built on, except
+# the one step marked CI ONLY below.
+#
+# Every `uses:` is pinned to a commit SHA with its version as a comment. pnpm comes from
+# pnpm/action-setup, which reads packageManager from package.json, and never from `corepack enable`:
+# on a machine where pnpm is an ordinary global install, enabling corepack replaces it.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  demo:
+    name: lint, types, tests and browser tests against the stack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # Keycloak 26.7.4 with three realms and MongoDB 7, project acme-idp-demo. The run's secrets are
+      # generated into ${TMPDIR:-/tmp}/acme-idp-demo.env, outside the checkout, and the client secrets
+      # are put in through the admin API afterwards (facts.md, F11).
+      - name: Start the stack
+        run: pnpm stack:up
+
+      # The tenant that does not integrate. One of the tests checks that it is still there, unchanged,
+      # in the database the stack runs (FR-031).
+      - name: Seed the local tenant
+        run: pnpm seed
+
+      - name: Unit and integration tests
+        run: pnpm test
+
+      # CI ONLY. --with-deps installs Chromium's system libraries and needs root, which a fresh runner
+      # has. On the host the demo was built on, the libraries were already present and the browser
+      # lived in a directory outside the repository (playwright.config.ts), so there this step was
+      # `pnpm exec playwright install chromium` instead.
+      - name: Install Chromium for Playwright 1.62.1
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Playwright starts the API and the web client itself (playwright.config.ts, webServer).
+      - name: Browser tests
+        run: pnpm e2e
+
+      - name: Stop the stack and remove its volumes
+        if: always()
+        run: pnpm stack:down -v
