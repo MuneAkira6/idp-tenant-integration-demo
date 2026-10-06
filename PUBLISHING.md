@@ -52,8 +52,8 @@
 - [ ] README の「動かし方」の手順が通ること（`pnpm stack:up` → `pnpm install` → `pnpm seed` →
       `pnpm test` → `pnpm e2e`）。
 - [ ] `pnpm lint` と `pnpm typecheck` が通ること。
-- [ ] CI（`.github/workflows/ci.yml`）は、GitHub ではまだ一度も動かしていません。公開後、Actions を
-      有効にして一度動かし、緑になることを確かめてください。
+- [ ] CI（`.github/workflows/ci.yml`）が緑であること。GitHub では最初の push（2026-10-06、`fcee369`）で
+      一度走り、成功しています。
 
 ### 5. 残っていないか
 

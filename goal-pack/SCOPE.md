@@ -100,3 +100,6 @@ Made by a human on 2026-10-01, after the bus had answered DONE; not reviewed by 
    there), `pnpm e2e` (`8 passed`) and `pnpm stack:down -v`, every one exit 0; afterwards no container,
    volume or network of `acme-idp-demo` and no listener on the demo's ports. The env file was removed
    by hand afterwards, as README「制約・既知の限界」says it must be.
+6. **CI on GitHub** (2026-10-06). The repository was pushed to GitHub, and the workflow of item 5 ran
+   there for the first time on the push of `fcee369`: its one job passed on `ubuntu-24.04` in 2 min 28
+   s. README「制約・既知の限界」and PUBLISHING.md no longer say that it has not run.
